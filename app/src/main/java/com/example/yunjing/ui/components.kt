@@ -1,0 +1,259 @@
+package com.example.yunjing.ui
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Dp
+
+
+@Composable
+fun AppTopBar(
+    title: String,
+    onBack: (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+    logoResId: Int? = null
+) {
+    // ✅ 自定义 Header：完全控制左边距，不受 TopAppBar inset 影响
+    Surface(color = MaterialTheme.colorScheme.background) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // 这里就是你想要“靠左”的关键：把 start 调小即可
+                    .padding(start = 12.dp, end = 12.dp)
+                    // 顶部留给状态栏一点空间（你项目是透明状态栏）
+                    .padding(top = 10.dp, bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (onBack != null) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "back")
+                    }
+                    Spacer(Modifier.width(4.dp))
+                }
+
+                if (logoResId != null) {
+                    Image(
+                        painter = painterResource(id = logoResId),
+                        contentDescription = "team logo",
+                        modifier = Modifier
+                            .size(40.dp) // ✅ logo 更大一点
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                    Spacer(Modifier.width(12.dp))
+                }
+
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Row(content = actions)
+            }
+
+            Divider(color = MaterialTheme.colorScheme.outline)
+        }
+    }
+}
+
+@Composable
+fun AppTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    singleLine: Boolean = true,
+    isPassword: Boolean = false,
+    enablePasswordToggle: Boolean = true
+) {
+    var showPassword by remember { mutableStateOf(false) }
+
+    val visualTransformation: VisualTransformation =
+        if (isPassword && !showPassword) PasswordVisualTransformation() else VisualTransformation.None
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = singleLine,
+        maxLines = if (singleLine) 1 else Int.MAX_VALUE,
+        placeholder = { Text(placeholder) },
+        label = null,
+        visualTransformation = visualTransformation,
+        trailingIcon = {
+            if (isPassword && enablePasswordToggle) {
+                val icon = if (showPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                PressIconButton(
+                    onClick = { showPassword = !showPassword },
+                    size = 40.dp
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = if (showPassword) "隐藏密码" else "显示密码",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+            }
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .height(51.dp),
+        shape = RoundedCornerShape(16.dp),
+        textStyle = TextStyle(fontSize = 15.sp, lineHeight = 18.sp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+
+            focusedBorderColor = Color.Transparent,
+            unfocusedBorderColor = Color.Transparent,
+            disabledBorderColor = Color.Transparent,
+
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            cursorColor = MaterialTheme.colorScheme.primary
+        )
+    )
+}
+
+@Composable
+fun Modifier.noIndicationClickable(
+    enabled: Boolean = true,
+    onClick: () -> Unit
+): Modifier = this.pressClick(
+    enabled = enabled,
+    onClick = onClick
+)
+
+@Composable
+fun BackButton(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(40.dp)
+            .pressClick(onClick = onBack),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "back")
+    }
+}
+
+@Composable
+fun PressIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    size: Dp = 40.dp,
+    pressedAlpha: Float = 0.55f,
+    pressedScale: Float = 0.96f,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .pressClick(
+                enabled = enabled,
+                pressedAlpha = pressedAlpha,
+                pressedScale = pressedScale,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
+    }
+}
+
+@Composable
+fun Modifier.pressClick(
+    enabled: Boolean = true,
+    pressedAlpha: Float = 0.55f,
+    pressedScale: Float = 0.96f,
+    role: Role? = null,
+    onClick: () -> Unit
+): Modifier {
+    var down by remember { mutableStateOf(false) }
+
+    val alpha by animateFloatAsState(
+        targetValue = if (enabled && down) pressedAlpha else 1f,
+        label = "pressAlphaFast"
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (enabled && down) pressedScale else 1f,
+        label = "pressScaleFast"
+    )
+
+    return this
+        .graphicsLayer {
+            this.alpha = alpha
+            scaleX = scale
+            scaleY = scale
+        }
+        // ✅ 关键：按下瞬间就把 down=true（比 interaction pressed 更“跟手”）
+        .pointerInput(enabled) {
+            if (!enabled) return@pointerInput
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                    val anyDown = event.changes.any { it.changedToDownIgnoreConsumed() }
+                    val anyUp = event.changes.any { it.changedToUpIgnoreConsumed() }
+
+                    if (anyDown) down = true
+                    if (anyUp) down = false
+                }
+            }
+        }
+        // ✅ 点击仍然交给 clickable（语义/无障碍/可用性更好）
+        .clickable(
+            enabled = enabled,
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            role = role,
+            onClick = onClick
+        )
+}
