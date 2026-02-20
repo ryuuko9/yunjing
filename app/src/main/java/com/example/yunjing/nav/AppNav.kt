@@ -122,8 +122,7 @@ fun AppNav() {
                 onLogout = {
                     scope.launch {
                         authStore.logout(UserRole.BUYER)
-                        roleStore.clearRole()
-                        nav.navigate(Destinations.ROLE) {
+                        nav.navigate(Destinations.auth(Destinations.ROLE_BUYER)) {
                             popUpTo(Destinations.BUYER_MAIN) { inclusive = true }
                             launchSingleTop = true
                         }
@@ -147,7 +146,6 @@ fun AppNav() {
                 onLogout = {
                     scope.launch {
                         authStore.logout(UserRole.MERCHANT)
-                        roleStore.clearRole()
                         nav.navigate(Destinations.ROLE) {
                             popUpTo(Destinations.MERCHANT_MAIN) { inclusive = true }
                             launchSingleTop = true

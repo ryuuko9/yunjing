@@ -73,6 +73,9 @@ fun AuthScreen(
     var regPwd2 by rememberSaveable { mutableStateOf("") }
     var regAgree by rememberSaveable { mutableStateOf(false) }
 
+    // 注册成功弹窗
+    var showRegisterSuccessDialog by remember { mutableStateOf(false) }
+
     val headerBrush = Brush.linearGradient(
         colors = listOf(
             MaterialTheme.colorScheme.primary.copy(alpha = 0.32f),
@@ -274,6 +277,13 @@ fun AuthScreen(
                             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         }
 
+                        val clearRegisterFields = {
+                            regAccount = ""
+                            regPwd = ""
+                            regPwd2 = ""
+                            regAgree = false
+                        }
+
                         GradientButton(
                             text = "注 册",
                             enabled = regAgree && regAccount.isNotBlank() && pwdOk && pwdMatch,
@@ -284,11 +294,42 @@ fun AuthScreen(
                                         regPwd.length !in 6..20 -> { errorMsg = "密码长度需为 6-20 位"; return@launch }
                                         regPwd != regPwd2 -> { errorMsg = "两次密码不一致"; return@launch }
                                         else -> {
-                                            authStore.register(userRole, regAccount.trim(), regPwd)
-                                            onAuthSuccess()
+                                            val acc = regAccount.trim()
+                                            authStore.register(userRole, acc, regPwd)
+                                            // ✅ 预填登录账号（更顺手）
+                                            loginAccount = acc
+                                            // 可选：清空登录密码，要求重新输入（更符合“再次登录”）
+                                            loginPassword = ""
+                                            // 可选：把勾选同步过去（不想同步就删掉这行）
+                                            loginAgree = regAgree
+                                            showRegisterSuccessDialog = true
                                         }
                                     }
                                 }
+                            }
+                        )
+
+                        AppCenterDialog(
+                            visible = showRegisterSuccessDialog,
+                            title = "注册成功",
+                            message = "账号已创建，请使用刚才的账号密码登录。",
+                            confirmText = "去登录",
+                            cancelText = "稍后",
+                            dismissOnClickOutside = false, // ✅ 再保险一次
+                            onConfirm = {
+                                showRegisterSuccessDialog = false
+
+                                clearRegisterFields()
+
+                                // ✅ 切换到登录页
+                                tab = 0
+
+                                // （可选）清空登录密码，让用户重新输入更符合“再次登录”
+                                loginPassword = ""
+                            },
+                            onCancel = {
+                                clearRegisterFields()
+                                showRegisterSuccessDialog = false
                             }
                         )
 
@@ -304,6 +345,8 @@ fun AuthScreen(
                                 showLegalSheet = true
                             }
                         )
+
+
                     }
                 }
             }

@@ -65,7 +65,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
-
+    implementation("androidx.compose.material:material-icons-extended")
     // Navigation Compose（你 AppNav 用到了）
     implementation("androidx.navigation:navigation-compose:2.7.7")
 

@@ -39,12 +39,12 @@ class AuthStore(private val ctx: Context) {
                 UserRole.BUYER -> {
                     p[Keys.BUYER_ACCOUNT] = account
                     p[Keys.BUYER_PASSWORD] = password
-                    p[Keys.BUYER_LOGGED_IN] = true
+                    p[Keys.BUYER_LOGGED_IN] = false
                 }
                 UserRole.MERCHANT -> {
                     p[Keys.MERCHANT_ACCOUNT] = account
                     p[Keys.MERCHANT_PASSWORD] = password
-                    p[Keys.MERCHANT_LOGGED_IN] = true
+                    p[Keys.MERCHANT_LOGGED_IN] = false
                 }
             }
         }
