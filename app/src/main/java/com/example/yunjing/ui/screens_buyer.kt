@@ -25,10 +25,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavDestination
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,7 +47,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.ui.graphics.Color
 import com.example.yunjing.data.AuthStore
 import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.flow.distinctUntilChanged
 import com.example.yunjing.data.UserRole
 
 /**
