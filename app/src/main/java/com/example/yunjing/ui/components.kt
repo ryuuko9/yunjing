@@ -63,7 +63,7 @@ fun AppTopBar(
                     // 这里就是你想要“靠左”的关键：把 start 调小即可
                     .padding(start = 12.dp, end = 12.dp)
                     // 顶部留给状态栏一点空间（你项目是透明状态栏）
-                    .padding(top = 10.dp, bottom = 10.dp),
+                    .padding(top = 30.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (onBack != null) {

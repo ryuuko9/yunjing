@@ -27,9 +27,9 @@ fun RoleSelectScreen(
         Column(
             modifier = Modifier
                 .padding(padding)
-                .padding(20.dp)
+                .padding(start = 20.dp, end = 20.dp, top = 50.dp) // Increased top padding
                 .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp) // Increased space between elements
         ) {
             Text("选择入口", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.SemiBold)
             Text(
@@ -38,7 +38,7 @@ fun RoleSelectScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(10.dp)) // More space before the cards
 
             EntryCard(
                 title = "买家版",

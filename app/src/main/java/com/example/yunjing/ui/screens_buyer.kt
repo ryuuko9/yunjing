@@ -38,6 +38,19 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.yunjing.nav.Destinations
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.ui.graphics.Color
+import com.example.yunjing.data.AuthStore
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.flow.distinctUntilChanged
+import com.example.yunjing.data.UserRole
 
 /**
  * 买家主壳：自绘底部栏（避免 NavigationBarItem 自带 ripple/indication 风险）
@@ -49,6 +62,13 @@ fun BuyerMainShell(
 ) {
     val innerNav = rememberNavController()
     val tabs = remember { buyerTabs() }
+
+    val context = LocalContext.current
+    val authStore = remember(context) { AuthStore(context) }
+
+    val username by authStore
+        .accountFlow(UserRole.BUYER)
+        .collectAsState(initial = "未登录")
 
     // 当前 route
     val navBackStackEntry by innerNav.currentBackStackEntryAsState()
@@ -69,7 +89,8 @@ fun BuyerMainShell(
                 BuyerTabNavHost(
                     nav = innerNav,
                     onSwitchRole = onSwitchRole,
-                    onLogout = onLogout
+                    onLogout = onLogout,
+                    username = username
                 )
             }
 
@@ -96,7 +117,8 @@ fun BuyerMainShell(
 private fun BuyerTabNavHost(
     nav: NavHostController,
     onSwitchRole: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    username: String
 ) {
     NavHost(
         navController = nav,
@@ -114,7 +136,8 @@ private fun BuyerTabNavHost(
         composable(Destinations.BUYER_PROFILE) {
             BuyerProfileScreen(
                 onSwitchRole = onSwitchRole,
-                onLogout = onLogout
+                onLogout = onLogout,
+                username = username
             )
         }
     }
@@ -492,77 +515,163 @@ fun BuyerAiAssistScreen() {
 
 @Composable
 fun BuyerProfileScreen(
+    username: String,
     onSwitchRole: () -> Unit,
     onLogout: () -> Unit
 ) {
     var showSwitchConfirm by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
 
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .buyerSoftBackground()
             .statusBarsPadding()
-            .padding(horizontal = 20.dp)
+            .verticalScroll(scrollState)
+            .padding(horizontal = 18.dp)
+            .padding(bottom = 18.dp)
     ) {
-        Spacer(Modifier.height(14.dp))
-        Text(
-            text = "我的",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = "账号、角色与设置",
-            fontSize = 13.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Spacer(Modifier.height(10.dp))
 
-        Spacer(Modifier.height(18.dp))
-
-        SoftCard(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier
+        // 顶部标题（仿 iOS：居中、留白）
+        Row(
+            modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)) {
-                Text("当前身份：买家", fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(6.dp))
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "我的账号",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        // 头像+昵称区（仿图：居中、头像上方大留白）
+        SoftCard(
+            modifier = Modifier.fillMaxWidth(),
+            corner = 26.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 14.dp, bottom = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                BuyerAvatar(
+                    modifier = Modifier.size(84.dp)
+                )
+                Spacer(Modifier.height(12.dp))
+
                 Text(
-                    "你可以切换身份进入商家端，或退出登录。",
-                    fontSize = 13.sp,
+                    text = username,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "买家 · 未绑定手机号",
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
 
-                Spacer(Modifier.height(14.dp))
-                PrimaryPillButton(text = "切换身份", onClick = { showSwitchConfirm = true })
+        Spacer(Modifier.height(14.dp))
+
+        // 功能入口列表（每个都是独立卡片，圆角大、阴影克制、右箭头）
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            ProfileEntryCard(
+                icon = Icons.Filled.Settings,
+                iconBg = Color(0xFF28C76F),
+                title = "通用设置",
+                onClick = { /* TODO: 设置页 */ }
+            )
+            ProfileEntryCard(
+                icon = Icons.Filled.Person,
+                iconBg = Color(0xFF4BB3FF),
+                title = "个人信息",
+                onClick = { /* TODO: 个人资料页 */ }
+            )
+            ProfileEntryCard(
+                icon = Icons.Filled.Security,
+                iconBg = Color(0xFF8B5CFF),
+                title = "安全选项",
+                onClick = { /* TODO: 安全设置页 */ }
+            )
+            ProfileEntryCard(
+                icon = Icons.Filled.HelpOutline,
+                iconBg = Color(0xFFFFB020),
+                title = "帮助与反馈",
+                onClick = { /* TODO: 反馈/客服 */ }
+            )
+            ProfileEntryCard(
+                icon = Icons.Filled.Info,
+                iconBg = Color(0xFF9AA4B2),
+                title = "关于云镜智联",
+                onClick = { /* TODO: 关于页 */ }
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // 账号操作区（切换身份/退出登录）
+        SoftCard(
+            modifier = Modifier.fillMaxWidth(),
+            corner = 26.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 2.dp, vertical = 2.dp)
+            ) {
+                ProfileActionRow(
+                    text = "切换身份",
+                    onClick = { showSwitchConfirm = true }
+                )
                 Spacer(Modifier.height(10.dp))
-                SecondaryPillButton(text = "退出登录", onClick = { showLogoutConfirm = true })
+                DangerLogoutButton(
+                    text = "退出登录",
+                    onClick = { showLogoutConfirm = true }
+                )
             }
         }
     }
 
-    AppConfirmDialog(
+    // ✅ iOS 感：禁止点空白关闭（防误触）
+    AppCenterDialog(
         visible = showSwitchConfirm,
         title = "切换身份",
-        message = "将返回身份选择页。你可以重新选择入口。",
+        message = "将返回身份选择页，你可以重新选择买家或商家入口。",
         confirmText = "继续切换",
         cancelText = "取消",
         onConfirm = {
             showSwitchConfirm = false
             onSwitchRole()
         },
-        onCancel = { showSwitchConfirm = false }
+        onCancel = { showSwitchConfirm = false },
+        dismissOnClickOutside = false
     )
 
-    AppConfirmDialog(
+    AppCenterDialog(
         visible = showLogoutConfirm,
         title = "退出登录",
-        message = "退出后需要重新登录。",
+        message = "退出后需要重新登录，确定要退出吗？",
         confirmText = "退出登录",
         cancelText = "取消",
         onConfirm = {
             showLogoutConfirm = false
             onLogout()
         },
-        onCancel = { showLogoutConfirm = false }
+        onCancel = { showLogoutConfirm = false },
+        dismissOnClickOutside = false
     )
 }
 
@@ -688,5 +797,144 @@ private fun SecondaryPillButton(
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
         )
+    }
+}
+
+@Composable
+private fun BuyerAvatar(
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(28.dp)
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        // 先用一个“山”味的占位：后续你接真实头像/Logo，只需要换这里
+        Text(
+            text = "云",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+private fun ProfileEntryCard(
+    icon: ImageVector,
+    iconBg: Color,
+    title: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .pressClick(onClick = onClick), // ✅ 无 ripple + iOS press
+        tonalElevation = 2.dp,
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(22.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(iconBg.copy(alpha = 0.90f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfileActionRow(
+    text: String,           // 按钮文字（原 title）
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.primary) // 蓝色背景，可根据需要自定义颜色
+            .pressClick(onClick = onClick)                 // 保留原有点击效果
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        contentAlignment = Alignment.Center                 // 内容居中
+    ) {
+        Text(
+            text = text,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onPrimary      // 文字颜色（通常为白色）
+        )
+    }
+}
+
+@Composable
+private fun DangerLogoutButton(
+    text: String,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .clip(shape)
+            .background(Color(0xFFFF3B30).copy(alpha = 0.92f)) // iOS 红
+            .pressClick(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Filled.Logout,
+                contentDescription = null,
+                tint = Color.White
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = text,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White
+            )
+        }
     }
 }

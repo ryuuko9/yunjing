@@ -102,6 +102,7 @@ fun AuthScreen(
             onBack = onBack,
             modifier = Modifier
                 .zIndex(10f)
+                .statusBarsPadding()
                 .padding(start = 12.dp, top = 10.dp)
         )
 
@@ -109,11 +110,14 @@ fun AuthScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
-                .padding(top = 56.dp, bottom = 20.dp),
+                .padding(top = 44.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            Spacer(modifier = Modifier.height(11.dp))
+
             Text(
                 text = "Hello!",
                 style = MaterialTheme.typography.headlineLarge,
@@ -124,6 +128,8 @@ fun AuthScreen(
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Black
             )
+
+            Spacer(modifier = Modifier.height(55.dp))
 
             Card(
                 shape = RoundedCornerShape(26.dp),
@@ -372,7 +378,7 @@ private fun CenterLogo() {
             painter = painterResource(id = R.drawable.team_logo),
             contentDescription = "team_logo",
             modifier = Modifier
-                .size(56.dp)
+                .size(72.dp)
                 .clip(RoundedCornerShape(16.dp))
         )
     }
