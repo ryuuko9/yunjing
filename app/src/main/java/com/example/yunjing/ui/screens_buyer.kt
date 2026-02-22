@@ -99,12 +99,17 @@ fun BuyerMainShell(
                 tabs = tabs,
                 currentDestination = currentDestination,
                 onTabClick = { route ->
-                    innerNav.navigate(route) {
-                        launchSingleTop = true
-                        restoreState = true
-                        // ✅ 关键：用 graph 的 startDestination，退出再进入也稳定
-                        popUpTo(innerNav.graph.findStartDestination().id) {
-                            saveState = true
+                    // ✅ 首页：永远用 popBackStack，保证一定回得去
+                    if (route == Destinations.BUYER_HOME) {
+                        innerNav.popBackStack(Destinations.BUYER_HOME, inclusive = false)
+                    } else {
+                        innerNav.navigate(route) {
+                            launchSingleTop = true
+                            restoreState = true
+                            // ✅ 用明确 route，比 startDestinationId 更稳定
+                            popUpTo(Destinations.BUYER_HOME) {
+                                saveState = true
+                            }
                         }
                     }
                 }
@@ -772,30 +777,6 @@ private fun PrimaryPillButton(
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onPrimary
-        )
-    }
-}
-
-@Composable
-private fun SecondaryPillButton(
-    text: String,
-    onClick: () -> Unit
-) {
-    val shape = RoundedCornerShape(16.dp)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(46.dp)
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
-            .pressClick(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
