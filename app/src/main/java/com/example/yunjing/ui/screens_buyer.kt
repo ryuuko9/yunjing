@@ -48,7 +48,10 @@ import androidx.compose.ui.graphics.Color
 import com.example.yunjing.data.AuthStore
 import androidx.compose.ui.platform.LocalContext
 import com.example.yunjing.data.UserRole
-
+import androidx.compose.foundation.border
+import androidx.compose.runtime.Composable
+import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.layout.navigationBarsPadding
 /**
  * 买家主壳：自绘底部栏（避免 NavigationBarItem 自带 ripple/indication 风险）
  */
@@ -832,15 +835,23 @@ private fun ProfileEntryCard(
     title: String,
     onClick: () -> Unit
 ) {
+    val shape = RoundedCornerShape(22.dp)
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .pressClick(onClick = onClick), // ✅ 无 ripple + iOS press
-        tonalElevation = 2.dp,
-        shadowElevation = 8.dp,
+            // Surface 本身会按 shape 裁切与绘制，不需要再额外 clip 一次
+            .pressClick(onClick = onClick)
+            // ✅ 可选：用“轻描边”替代阴影（更像 iOS 列表项）
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                shape = shape
+            ),
+        tonalElevation = 0.dp,   // ✅ 关掉 tonal（避免表面色调变化）
+        shadowElevation = 0.dp,  // ✅ 关键：关掉阴影
         color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(22.dp)
+        shape = shape
     ) {
         Row(
             modifier = Modifier
