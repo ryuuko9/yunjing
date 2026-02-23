@@ -499,13 +499,13 @@ fun BuyerTutorialScreen() {
     )
 }
 
-@Composable
-fun BuyerAiAssistScreen() {
-    SimplePlaceholderPage(
-        title = "AI 助手",
-        subtitle = "拍照诊断卡点，或直接提问"
-    )
-}
+//@Composable
+//fun BuyerAiAssistScreen() {
+//    SimplePlaceholderPage(
+//        title = "AI 助手",
+//        subtitle = "拍照诊断卡点，或直接提问"
+//    )
+//}
 
 @Composable
 fun BuyerProfileScreen(

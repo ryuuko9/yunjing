@@ -75,7 +75,6 @@ fun AppNav() {
                     scope.launch {
                         roleStore.setRole(UserRole.BUYER)
                         nav.navigate(Destinations.auth(Destinations.ROLE_BUYER)) {
-                            popUpTo(Destinations.ROLE) { inclusive = true }
                             launchSingleTop = true
                         }
                     }
@@ -84,7 +83,6 @@ fun AppNav() {
                     scope.launch {
                         roleStore.setRole(UserRole.MERCHANT)
                         nav.navigate(Destinations.auth(Destinations.ROLE_MERCHANT)) {
-                            popUpTo(Destinations.ROLE) { inclusive = true }
                             launchSingleTop = true
                         }
                     }

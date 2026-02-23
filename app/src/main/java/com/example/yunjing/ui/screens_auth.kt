@@ -92,15 +92,8 @@ fun AuthScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(headerBrush)
     ) {
-        // 顶部渐变背景
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(210.dp)
-                .background(headerBrush)
-        )
 
         // 返回按钮
         BackButton(
@@ -508,7 +501,7 @@ private fun SegmentedItem(
 }
 
 @Composable
-private fun GradientButton(
+fun GradientButton(
     text: String,
     enabled: Boolean,
     onClick: () -> Unit
