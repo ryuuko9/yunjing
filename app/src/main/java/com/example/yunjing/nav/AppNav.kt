@@ -38,52 +38,61 @@ fun AppNav() {
                 initial = SessionState(buyerLoggedIn = false, merchantLoggedIn = false)
             )
 
-            // ✅ 防止 Flow 多次发射造成重复 navigate
-            var didRoute by remember { mutableStateOf(false) }
+            // ✅ 用“目标路由判重”，不要用 didRoute 一次性锁死
+            var lastTarget by remember { mutableStateOf<String?>(null) }
 
             LaunchedEffect(role, session) {
-                if (didRoute) return@LaunchedEffect
-
                 val target = when (role) {
                     null -> Destinations.ROLE
+
                     UserRole.BUYER ->
-                        if (session.buyerLoggedIn) Destinations.BUYER_MAIN else Destinations.auth(Destinations.ROLE_BUYER)
+                        if (session.buyerLoggedIn) Destinations.BUYER_MAIN
+                        else Destinations.auth(Destinations.ROLE_BUYER)
+
                     UserRole.MERCHANT ->
-                        if (session.merchantLoggedIn) Destinations.MERCHANT_MAIN else Destinations.auth(Destinations.ROLE_MERCHANT)
+                        if (session.merchantLoggedIn) Destinations.MERCHANT_MAIN
+                        else Destinations.auth(Destinations.ROLE_MERCHANT)
                 }
 
-                didRoute = true
+                if (target == lastTarget) return@LaunchedEffect
+                lastTarget = target
+
                 nav.navigate(target) {
                     popUpTo(Destinations.GATE) { inclusive = true }
                     launchSingleTop = true
                 }
             }
 
-            // ✅ Gate 至少有 UI（避免黑屏/空白）
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         }
 
-        // 1) 角色选择页
+        // 1) 角色选择页：✅ 这里直接去 AUTH（最稳）
         composable(Destinations.ROLE) {
             RoleSelectScreen(
                 onPickBuyer = {
-                    scope.launch { roleStore.setRole(UserRole.BUYER) }
-                    nav.navigate(Destinations.auth(Destinations.ROLE_BUYER)) {
-                        launchSingleTop = true
+                    scope.launch {
+                        roleStore.setRole(UserRole.BUYER)
+                        nav.navigate(Destinations.auth(Destinations.ROLE_BUYER)) {
+                            popUpTo(Destinations.ROLE) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 },
                 onPickMerchant = {
-                    scope.launch { roleStore.setRole(UserRole.MERCHANT) }
-                    nav.navigate(Destinations.auth(Destinations.ROLE_MERCHANT)) {
-                        launchSingleTop = true
+                    scope.launch {
+                        roleStore.setRole(UserRole.MERCHANT)
+                        nav.navigate(Destinations.auth(Destinations.ROLE_MERCHANT)) {
+                            popUpTo(Destinations.ROLE) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 }
             )
         }
 
-        // 2) 登录/注册页
+        // 2) 登录/注册页：✅ 登录成功统一回 Gate（现在不会被误导回 ROLE 了）
         composable(
             route = Destinations.AUTH_ROUTE,
             arguments = listOf(navArgument(Destinations.ARG_ROLE) { type = NavType.StringType })
@@ -94,12 +103,7 @@ fun AppNav() {
                 role = roleStr,
                 onBack = { nav.popBackStack() },
                 onAuthSuccess = {
-                    val target = if (roleStr == Destinations.ROLE_MERCHANT) {
-                        Destinations.MERCHANT_MAIN
-                    } else {
-                        Destinations.BUYER_MAIN
-                    }
-                    nav.navigate(target) {
+                    nav.navigate(Destinations.GATE) {
                         popUpTo(Destinations.AUTH_ROUTE) { inclusive = true }
                         launchSingleTop = true
                     }
@@ -107,13 +111,13 @@ fun AppNav() {
             )
         }
 
-        // 3) 买家主界面（加退出登录）
+        // 3) 买家主界面（退出/切换统一回 Gate）
         composable(Destinations.BUYER_MAIN) {
             BuyerMainShell(
                 onSwitchRole = {
                     scope.launch {
                         roleStore.clearRole()
-                        nav.navigate(Destinations.ROLE) {
+                        nav.navigate(Destinations.GATE) {
                             popUpTo(Destinations.BUYER_MAIN) { inclusive = true }
                             launchSingleTop = true
                         }
@@ -122,7 +126,7 @@ fun AppNav() {
                 onLogout = {
                     scope.launch {
                         authStore.logout(UserRole.BUYER)
-                        nav.navigate(Destinations.auth(Destinations.ROLE_BUYER)) {
+                        nav.navigate(Destinations.GATE) {
                             popUpTo(Destinations.BUYER_MAIN) { inclusive = true }
                             launchSingleTop = true
                         }
@@ -131,13 +135,13 @@ fun AppNav() {
             )
         }
 
-        // 4) 商家主界面（加退出登录）
+        // 4) 商家主界面（退出/切换统一回 Gate）
         composable(Destinations.MERCHANT_MAIN) {
             MerchantMainShell(
                 onSwitchRole = {
                     scope.launch {
                         roleStore.clearRole()
-                        nav.navigate(Destinations.ROLE) {
+                        nav.navigate(Destinations.GATE) {
                             popUpTo(Destinations.MERCHANT_MAIN) { inclusive = true }
                             launchSingleTop = true
                         }
@@ -146,7 +150,7 @@ fun AppNav() {
                 onLogout = {
                     scope.launch {
                         authStore.logout(UserRole.MERCHANT)
-                        nav.navigate(Destinations.ROLE) {
+                        nav.navigate(Destinations.GATE) {
                             popUpTo(Destinations.MERCHANT_MAIN) { inclusive = true }
                             launchSingleTop = true
                         }

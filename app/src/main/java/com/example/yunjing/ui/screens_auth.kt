@@ -82,6 +82,13 @@ fun AuthScreen(
         )
     )
 
+    val clearRegisterFields = {
+        regAccount = ""
+        regPwd = ""
+        regPwd2 = ""
+        regAgree = false
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -143,7 +150,10 @@ fun AuthScreen(
                         left = "账号登录",
                         right = if (isBuyer) "立即注册" else "商家注册",
                         selectedIndex = tab,
-                        onSelect = { tab = it }
+                        onSelect = {
+                            errorMsg = null
+                            tab = it
+                        }
                     )
 
                     if (tab == 0) {
@@ -173,7 +183,11 @@ fun AuthScreen(
                                 "没有账号？立即注册",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.noIndicationClickable { tab = 1 }
+                                modifier = Modifier.noIndicationClickable {
+                                    errorMsg = null
+                                    loginPassword = ""
+                                    tab = 1
+                                }
                             )
                             Text(
                                 "忘记密码",
@@ -269,7 +283,11 @@ fun AuthScreen(
                                 "已有账号？去登录",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.noIndicationClickable { tab = 0 }
+                                modifier = Modifier.noIndicationClickable {
+                                    errorMsg = null
+                                    clearRegisterFields()
+                                    tab = 0
+                                }
                             )
                         }
 

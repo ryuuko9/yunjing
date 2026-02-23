@@ -183,17 +183,6 @@ private fun buyerTabs(): List<BuyerTab> = listOf(
     )
 )
 
-/**
- * 小 icon 包一层，后面更好统一尺寸/颜色
- */
-@Composable
-private fun SimpleIcon(icon: ImageVector) {
-    Icon(
-        imageVector = icon,
-        contentDescription = null
-    )
-}
-
 @Composable
 private fun BuyerBottomBar(
     tabs: List<BuyerTab>,
@@ -651,32 +640,21 @@ fun BuyerProfileScreen(
     }
 
     // ✅ iOS 感：禁止点空白关闭（防误触）
-    AppCenterDialog(
-        visible = showSwitchConfirm,
-        title = "切换身份",
-        message = "将返回身份选择页，你可以重新选择买家或商家入口。",
-        confirmText = "继续切换",
-        cancelText = "取消",
-        onConfirm = {
+    ProfileConfirmDialogs(
+        showSwitchConfirm = showSwitchConfirm,
+        showLogoutConfirm = showLogoutConfirm,
+        onDismissSwitch = { showSwitchConfirm = false },
+        onDismissLogout = { showLogoutConfirm = false },
+        onConfirmSwitch = {
             showSwitchConfirm = false
             onSwitchRole()
         },
-        onCancel = { showSwitchConfirm = false },
-        dismissOnClickOutside = false
-    )
-
-    AppCenterDialog(
-        visible = showLogoutConfirm,
-        title = "退出登录",
-        message = "退出后需要重新登录，确定要退出吗？",
-        confirmText = "退出登录",
-        cancelText = "取消",
-        onConfirm = {
+        onConfirmLogout = {
             showLogoutConfirm = false
             onLogout()
         },
-        onCancel = { showLogoutConfirm = false },
-        dismissOnClickOutside = false
+        roleName = "买家",
+        username = username
     )
 }
 

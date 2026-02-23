@@ -271,78 +271,45 @@ fun Modifier.pressClick(
         )
 }
 
+
 @Composable
-fun AppConfirmDialog(
-    visible: Boolean,
-    title: String,
-    message: String,
-    confirmText: String = "确认",
-    cancelText: String = "取消",
-    onConfirm: () -> Unit,
-    onCancel: () -> Unit,
-    onDismiss: () -> Unit = onCancel
+fun ProfileConfirmDialogs(
+    showSwitchConfirm: Boolean,
+    showLogoutConfirm: Boolean,
+    onDismissSwitch: () -> Unit,
+    onDismissLogout: () -> Unit,
+    onConfirmSwitch: () -> Unit,
+    onConfirmLogout: () -> Unit,
+    roleName: String,            // "买家" / "商家"
+    username: String? = null      // 可选：显示账号，减少误操作
 ) {
-    if (!visible) return
+    AppCenterDialog(
+        visible = showSwitchConfirm,
+        title = "切换身份",
+        message = buildString {
+            append("将返回身份选择页，你可以重新选择买家或商家入口。")
+            if (!username.isNullOrBlank()) append("\n\n当前账号：$username（$roleName）")
+        },
+        confirmText = "继续切换",
+        cancelText = "取消",
+        onConfirm = onConfirmSwitch,
+        onCancel = onDismissSwitch,
+        dismissOnClickOutside = false
+    )
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.35f))
-            // 点遮罩关闭（更符合 iOS），如果你想“必须点按钮”，把这一行删掉即可
-            .noPressClickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center
-    ) {
-        Box (
-            modifier = Modifier.noPressClickable {}
-        ) {
-            Surface(
-                shape = RoundedCornerShape(22.dp),
-                tonalElevation = 3.dp,
-                shadowElevation = 12.dp,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column(
-                    modifier = Modifier
-                        .widthIn(min = 280.dp, max = 320.dp)
-                        .padding(18.dp)
-                ) {
-                    Text(
-                        text = title,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = message,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 18.sp
-                    )
-
-                    Spacer(Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        DialogPillButton(
-                            text = cancelText,
-                            filled = false,
-                            modifier = Modifier.weight(1f),
-                            onClick = onCancel
-                        )
-                        DialogPillButton(
-                            text = confirmText,
-                            filled = true,
-                            modifier = Modifier.weight(1f),
-                            onClick = onConfirm
-                        )
-                    }
-                }
-            }
-        }
-    }
+    AppCenterDialog(
+        visible = showLogoutConfirm,
+        title = "退出登录",
+        message = buildString {
+            append("退出后需要重新登录，确定要退出吗？")
+            if (!username.isNullOrBlank()) append("\n\n当前账号：$username（$roleName）")
+        },
+        confirmText = "退出登录",
+        cancelText = "取消",
+        onConfirm = onConfirmLogout,
+        onCancel = onDismissLogout,
+        dismissOnClickOutside = false
+    )
 }
 
 @Composable
