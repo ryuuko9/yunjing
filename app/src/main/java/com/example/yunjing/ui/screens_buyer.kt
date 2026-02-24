@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavDestination
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,11 +49,11 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.yunjing.data.UserRole
 import androidx.compose.foundation.border
 import androidx.compose.runtime.Composable
-import androidx.compose.material3.Scaffold
-import androidx.compose.foundation.layout.navigationBarsPadding
+
 /**
- * 买家主壳：自绘底部栏（避免 NavigationBarItem 自带 ripple/indication 风险）
+ * 买家主壳：自绘底部栏
  */
+
 @Composable
 fun BuyerMainShell(
     onSwitchRole: () -> Unit,
@@ -94,19 +93,19 @@ fun BuyerMainShell(
                 )
             }
 
-            // 底部栏（安全：无 ripple）
+            // 底部栏
             BuyerBottomBar(
                 tabs = tabs,
                 currentDestination = currentDestination,
                 onTabClick = { route ->
-                    // ✅ 首页：永远用 popBackStack，保证一定回得去
+                    // 首页 永远用 popBackStack，保证一定回得去
                     if (route == Destinations.BUYER_HOME) {
                         innerNav.popBackStack(Destinations.BUYER_HOME, inclusive = false)
                     } else {
                         innerNav.navigate(route) {
                             launchSingleTop = true
                             restoreState = true
-                            // ✅ 用明确 route，比 startDestinationId 更稳定
+                            // 用明确 route，比 startDestinationId 更稳定
                             popUpTo(Destinations.BUYER_HOME) {
                                 saveState = true
                             }
@@ -151,8 +150,6 @@ private fun BuyerTabNavHost(
 /* ---------------------------
    Tab 定义 & 底部栏
 ---------------------------- */
-
-// ↑ 确保有这两个 import（Icon 你可能已有）
 
 private data class BuyerTab(
     val route: String,
@@ -240,7 +237,7 @@ private fun BuyerBottomBarItem(
         modifier = Modifier
             .width(76.dp)
             .clip(RoundedCornerShape(16.dp))
-            .pressClick(onClick = onClick) // ✅ 你的无 ripple 统一按压动效
+            .pressClick(onClick = onClick)
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -488,7 +485,7 @@ private fun RecentRow(
 }
 
 /* ---------------------------
-   其他 Tab（先给“好看占位”，后续再接真实功能）
+   其他 Tab（先给占位，后续再接真实功能）
 ---------------------------- */
 
 @Composable
@@ -498,14 +495,6 @@ fun BuyerTutorialScreen() {
         subtitle = "按商品/品类查找安装与维护教程"
     )
 }
-
-//@Composable
-//fun BuyerAiAssistScreen() {
-//    SimplePlaceholderPage(
-//        title = "AI 助手",
-//        subtitle = "拍照诊断卡点，或直接提问"
-//    )
-//}
 
 @Composable
 fun BuyerProfileScreen(
@@ -529,7 +518,7 @@ fun BuyerProfileScreen(
     ) {
         Spacer(Modifier.height(10.dp))
 
-        // 顶部标题（仿 iOS：居中、留白）
+        // 顶部标题
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -547,7 +536,7 @@ fun BuyerProfileScreen(
 
         Spacer(Modifier.height(14.dp))
 
-        // 头像+昵称区（仿图：居中、头像上方大留白）
+        // 头像 + 昵称区
         SoftCard(
             modifier = Modifier.fillMaxWidth(),
             corner = 26.dp
@@ -580,7 +569,7 @@ fun BuyerProfileScreen(
 
         Spacer(Modifier.height(14.dp))
 
-        // 功能入口列表（每个都是独立卡片，圆角大、阴影克制、右箭头）
+        // 功能入口列表
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ProfileEntryCard(
                 icon = Icons.Filled.Settings,
@@ -639,7 +628,7 @@ fun BuyerProfileScreen(
         }
     }
 
-    // ✅ iOS 感：禁止点空白关闭（防误触）
+    // 禁止点空白关闭（防误触）
     ProfileConfirmDialogs(
         showSwitchConfirm = showSwitchConfirm,
         showLogoutConfirm = showLogoutConfirm,
@@ -777,7 +766,7 @@ private fun BuyerAvatar(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // 先用一个“山”味的占位：后续你接真实头像/Logo，只需要换这里
+        // 先占位：后续接真实头像/Logo，只需要换这里
         Text(
             text = "云",
             fontSize = 28.sp,
@@ -801,14 +790,14 @@ private fun ProfileEntryCard(
             .fillMaxWidth()
             // Surface 本身会按 shape 裁切与绘制，不需要再额外 clip 一次
             .pressClick(onClick = onClick)
-            // ✅ 可选：用“轻描边”替代阴影（更像 iOS 列表项）
+            // 用“轻描边”替代阴影
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                 shape = shape
             ),
-        tonalElevation = 0.dp,   // ✅ 关掉 tonal（避免表面色调变化）
-        shadowElevation = 0.dp,  // ✅ 关键：关掉阴影
+        tonalElevation = 0.dp,   // 关掉 tonal（避免表面色调变化）
+        shadowElevation = 0.dp,  // 关键：关掉阴影
         color = MaterialTheme.colorScheme.surface,
         shape = shape
     ) {
@@ -853,7 +842,7 @@ private fun ProfileEntryCard(
 
 @Composable
 private fun ProfileActionRow(
-    text: String,           // 按钮文字（原 title）
+    text: String, // 按钮文字
     onClick: () -> Unit
 ) {
     Box(
@@ -861,15 +850,15 @@ private fun ProfileActionRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(MaterialTheme.colorScheme.primary) // 蓝色背景，可根据需要自定义颜色
-            .pressClick(onClick = onClick)                 // 保留原有点击效果
+            .pressClick(onClick = onClick) // 保留原有点击效果
             .padding(horizontal = 14.dp, vertical = 14.dp),
-        contentAlignment = Alignment.Center                 // 内容居中
+        contentAlignment = Alignment.Center // 内容居中
     ) {
         Text(
             text = text,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onPrimary      // 文字颜色（通常为白色）
+            color = MaterialTheme.colorScheme.onPrimary // 文字颜色
         )
     }
 }
@@ -885,7 +874,7 @@ private fun DangerLogoutButton(
             .fillMaxWidth()
             .height(48.dp)
             .clip(shape)
-            .background(Color(0xFFFF3B30).copy(alpha = 0.92f)) // iOS 红
+            .background(Color(0xFFFF3B30).copy(alpha = 0.92f))
             .pressClick(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {

@@ -35,7 +35,7 @@ fun YunjingTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    // 先只做 Light，后面需要我再补 Dark（AR/相机类应用常用浅色）
+    // 先只做 Light，后面有需要再补 Dark
     val scheme = LightColorScheme
 
     val view = LocalView.current

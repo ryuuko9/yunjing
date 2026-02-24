@@ -38,7 +38,7 @@ fun AppNav() {
                 initial = SessionState(buyerLoggedIn = false, merchantLoggedIn = false)
             )
 
-            // ✅ 用“目标路由判重”，不要用 didRoute 一次性锁死
+            // 用“目标路由判重”
             var lastTarget by remember { mutableStateOf<String?>(null) }
 
             LaunchedEffect(role, session) {
@@ -68,7 +68,7 @@ fun AppNav() {
             }
         }
 
-        // 1) 角色选择页：✅ 这里直接去 AUTH（最稳）
+        // 1) 角色选择页：这里直接去 AUTH
         composable(Destinations.ROLE) {
             RoleSelectScreen(
                 onPickBuyer = {
@@ -90,7 +90,7 @@ fun AppNav() {
             )
         }
 
-        // 2) 登录/注册页：✅ 登录成功统一回 Gate（现在不会被误导回 ROLE 了）
+        // 2) 登录/注册页：登录成功统一回 Gate
         composable(
             route = Destinations.AUTH_ROUTE,
             arguments = listOf(navArgument(Destinations.ARG_ROLE) { type = NavType.StringType })

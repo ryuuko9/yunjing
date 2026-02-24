@@ -54,15 +54,15 @@ fun AppTopBar(
     actions: @Composable RowScope.() -> Unit = {},
     logoResId: Int? = null
 ) {
-    // ✅ 自定义 Header：完全控制左边距，不受 TopAppBar inset 影响
+    // 自定义 Header，完全控制左边距，不受 TopAppBar inset 影响
     Surface(color = MaterialTheme.colorScheme.background) {
         Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    // 这里就是你想要“靠左”的关键：把 start 调小即可
+                    // “靠左” 把 start 调小即可
                     .padding(start = 12.dp, end = 12.dp)
-                    // 顶部留给状态栏一点空间（你项目是透明状态栏）
+                    // 顶部留给状态栏一点空间（透明状态栏）
                     .padding(top = 30.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -81,7 +81,7 @@ fun AppTopBar(
                         painter = painterResource(id = logoResId),
                         contentDescription = "team logo",
                         modifier = Modifier
-                            .size(40.dp) // ✅ logo 更大一点
+                            .size(40.dp)
                             .clip(RoundedCornerShape(12.dp))
                     )
                     Spacer(Modifier.width(12.dp))
@@ -172,17 +172,6 @@ fun Modifier.noIndicationClickable(
 )
 
 @Composable
-fun Modifier.noPressClickable(
-    enabled: Boolean = true,
-    onClick: () -> Unit
-): Modifier = this.clickable(
-    enabled = enabled,
-    interactionSource = remember { MutableInteractionSource() },
-    indication = null,
-    onClick = onClick
-)
-
-@Composable
 fun BackButton(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
@@ -247,7 +236,7 @@ fun Modifier.pressClick(
             scaleX = scale
             scaleY = scale
         }
-        // ✅ 关键：按下瞬间就把 down=true（比 interaction pressed 更“跟手”）
+        // 按下瞬间就把 down = true（更跟手）
         .pointerInput(enabled) {
             if (!enabled) return@pointerInput
             awaitPointerEventScope {
@@ -261,7 +250,6 @@ fun Modifier.pressClick(
                 }
             }
         }
-        // ✅ 点击仍然交给 clickable（语义/无障碍/可用性更好）
         .clickable(
             enabled = enabled,
             interactionSource = remember { MutableInteractionSource() },
@@ -280,14 +268,14 @@ fun ProfileConfirmDialogs(
     onDismissLogout: () -> Unit,
     onConfirmSwitch: () -> Unit,
     onConfirmLogout: () -> Unit,
-    roleName: String,            // "买家" / "商家"
-    username: String? = null      // 可选：显示账号，减少误操作
+    roleName: String, // "买家" / "商家"
+    username: String? = null // 可选：显示账号，减少误操作
 ) {
     AppCenterDialog(
         visible = showSwitchConfirm,
         title = "切换身份",
         message = buildString {
-            append("将返回身份选择页，你可以重新选择买家或商家入口。")
+            append("将返回身份选择页，你可以重新选择入口。")
             if (!username.isNullOrBlank()) append("\n\n当前账号：$username（$roleName）")
         },
         confirmText = "继续切换",
@@ -313,45 +301,6 @@ fun ProfileConfirmDialogs(
 }
 
 @Composable
-private fun DialogPillButton(
-    text: String,
-    filled: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    val shape = RoundedCornerShape(16.dp)
-    val bg = if (filled) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.95f)
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-    }
-    val fg = if (filled) {
-        MaterialTheme.colorScheme.onPrimary
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
-
-    Box(
-        modifier = modifier
-            .height(44.dp)
-            .clip(shape)
-            .background(bg)
-            .pressClick(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = fg
-        )
-    }
-}
-// app/src/main/java/com/example/yunjing/ui/components.kt
-
-// app/src/main/java/com/example/yunjing/ui/components.kt
-
-@Composable
 fun AppCenterDialog(
     visible: Boolean,
     title: String,
@@ -360,23 +309,22 @@ fun AppCenterDialog(
     cancelText: String = "取消",
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
-    dismissOnBackPress: Boolean = true,     // iOS 一般也允许返回/手势退出，这里默认允许
-    dismissOnClickOutside: Boolean = false  // ✅ 关键：禁止点空白关闭
+    dismissOnBackPress: Boolean = true,
+    dismissOnClickOutside: Boolean = false  // 禁止点空白关闭
 ) {
     if (!visible) return
 
     Dialog(
         onDismissRequest = {
-            // ✅ 不因为点击空白而关闭；只有 dismissOnBackPress=true 时才允许通过系统返回关闭
             if (dismissOnBackPress) onCancel()
         },
         properties = DialogProperties(
             dismissOnBackPress = dismissOnBackPress,
             dismissOnClickOutside = dismissOnClickOutside,
-            usePlatformDefaultWidth = false // ✅ 更像 iOS：更窄，不卡满
+            usePlatformDefaultWidth = false // 更窄，不卡满
         )
     ) {
-        // iOS 感：外面留白 + 居中小卡片
+        // 外面留白 + 居中小卡片
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -421,7 +369,7 @@ fun AppCenterDialog(
                                 .height(44.dp)
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
-                                .pressClick { onCancel() }, // ✅ 只有按钮有按压动效
+                                .pressClick { onCancel() }, // 只有按钮有按压动效
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -439,7 +387,7 @@ fun AppCenterDialog(
                                 .height(44.dp)
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.95f))
-                                .pressClick { onConfirm() }, // ✅ 只有按钮有按压动效
+                                .pressClick { onConfirm() }, // 只有按钮有按压动效
                             contentAlignment = Alignment.Center
                         ) {
                             Text(

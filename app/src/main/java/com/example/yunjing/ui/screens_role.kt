@@ -121,14 +121,14 @@ private fun EntryCard(
     Surface(
         shape = shape,
         tonalElevation = 0.dp,
-        shadowElevation = 0.dp, // 更克制，iOS 风
+        shadowElevation = 0.dp,
         color = Color.Transparent,
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
             .pressClick(
                 pressedAlpha = 0.75f,
-                pressedScale = 0.985f, // 微缩放更像 iOS
+                pressedScale = 0.985f,
                 onClick = onClick
             )
     ) {
@@ -143,7 +143,7 @@ private fun EntryCard(
                 .padding(horizontal = 18.dp, vertical = 22.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                // 顶部行：图标 + chip + 箭头
+                // 顶部行，图标 + chip + 箭头
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically

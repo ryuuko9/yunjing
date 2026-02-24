@@ -60,7 +60,7 @@ fun BuyerAiAssistScreen() {
             .fillMaxSize()
             .background(headerBrush)
             .statusBarsPadding()
-            .navigationBarsPadding() // ✅ 防止底部输入被 BottomBar 挡住
+            .navigationBarsPadding() // 防止底部输入被 BottomBar 挡住
     ) {
 
         Column(
@@ -322,7 +322,7 @@ private fun RowScope.Chip(
     Surface(
         modifier = Modifier
             .weight(1f)
-            .height(44.dp), // ✅ 关键：固定高度，避免撑满屏
+            .height(44.dp),
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 1.dp

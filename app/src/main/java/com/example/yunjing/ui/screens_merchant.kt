@@ -1,4 +1,3 @@
-// 文件路径：app/src/main/java/com/example/yunjing/ui/screens_merchant.kt
 package com.example.yunjing.ui
 
 import androidx.compose.animation.core.animateFloatAsState
@@ -60,8 +59,9 @@ import com.example.yunjing.nav.Destinations
 import androidx.compose.ui.platform.LocalContext
 
 /**
- * 商家主壳：自绘底部栏（无 ripple），整体风格对齐 Buyer（iOS 风）
+ * 商家主壳：自绘底部栏，整体风格对齐 Buyer
  */
+
 @Composable
 fun MerchantMainShell(
     onSwitchRole: () -> Unit,
@@ -103,7 +103,7 @@ fun MerchantMainShell(
                 tabs = tabs,
                 currentDestination = currentDestination,
                 onTabClick = { route ->
-                    // ✅ 工作台：永远能回到根
+                    // 工作台，永远能回到根
                     if (route == Destinations.MERCHANT_DASH) {
                         innerNav.popBackStack(Destinations.MERCHANT_DASH, inclusive = false)
                     } else {
@@ -149,7 +149,7 @@ private fun MerchantTabNavHost(
 }
 
 /* ---------------------------
-   Tab 定义 & 底部栏（自绘，无 ripple）
+   Tab 定义 & 底部栏
 ---------------------------- */
 
 private data class MerchantTab(
@@ -239,7 +239,7 @@ private fun MerchantBottomBarItem(
         modifier = Modifier
             .width(78.dp)
             .clip(RoundedCornerShape(16.dp))
-            .pressClick(onClick = onClick) // ✅ 统一无 ripple 按压
+            .pressClick(onClick = onClick)
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -266,7 +266,7 @@ private fun MerchantBottomBarItem(
 }
 
 /* ---------------------------
-   商家 - 工作台（iOS 风）
+   商家 - 工作台
 ---------------------------- */
 
 private data class MerchantQueueItem(
@@ -425,7 +425,7 @@ private fun DashboardRow(
 }
 
 /* ---------------------------
-   商家 - 内容库（iOS 风，占位但更“像产品”）
+   商家 - 内容库
 ---------------------------- */
 
 private data class ContentItem(
@@ -607,7 +607,7 @@ private fun MerchantAssistScreen() {
                 Text("提示", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "后续这里接：房间列表、WebRTC 画面、标注数据协议与叠加渲染。",
+                    "后续这里接入：房间列表、WebRTC 画面、标注数据协议与叠加渲染。",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 18.sp
@@ -618,7 +618,7 @@ private fun MerchantAssistScreen() {
 }
 
 /* ---------------------------
-   商家 - 我的（对齐 Buyer 的账号页体验）
+   商家 - 我的
 ---------------------------- */
 
 @Composable
@@ -733,7 +733,7 @@ private fun MerchantProfileScreen(
         }
     }
 
-    // ✅ 防误触：禁止点空白关闭
+    // 防误触，禁止点空白关闭
     ProfileConfirmDialogs(
         showSwitchConfirm = showSwitchConfirm,
         showLogoutConfirm = showLogoutConfirm,
@@ -753,7 +753,7 @@ private fun MerchantProfileScreen(
 }
 
 /* ---------------------------
-   iOS 风基础组件：背景 / 卡片 / 按钮 / 小组件
+   基础组件：背景 / 卡片 / 按钮 / 小组件
    （保持与 Buyer 同一套观感）
 ---------------------------- */
 

@@ -80,7 +80,7 @@ class AuthStore(private val ctx: Context) {
         }
     }
 
-    // ✅ 获取当前角色的“用户名/账号”（Flow，UI 用 collectAsState）
+    // 获取当前角色的“用户名/账号”（Flow，UI 用 collectAsState）
     fun accountFlow(role: UserRole): Flow<String> {
         return ctx.authDataStore.data.map { p ->
             when (role) {
@@ -90,7 +90,7 @@ class AuthStore(private val ctx: Context) {
         }
     }
 
-    // ✅ 一次性获取（非必须，但有时业务需要）
+    // 一次性获取（非必须，但有时业务需要）
     suspend fun getAccount(role: UserRole): String {
         val prefs = ctx.authDataStore.data.first()
         return when (role) {

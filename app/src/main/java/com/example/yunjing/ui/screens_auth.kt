@@ -37,7 +37,7 @@ enum class LegalDoc { TERMS, PRIVACY }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScreen(
-    role: String,                 // "buyer" or "merchant"
+    role: String, // 买家 or 商家
     onBack: () -> Unit,
     onAuthSuccess: () -> Unit
 
@@ -104,7 +104,7 @@ fun AuthScreen(
                 .padding(start = 12.dp, top = 10.dp)
         )
 
-        // ✅ 整体可滚动：小屏不会裁剪
+        // 整体可滚动：小屏不会裁剪
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -191,7 +191,7 @@ fun AuthScreen(
 
                         Spacer(Modifier.height(6.dp))
 
-                        // logo（登录页）
+                        // 登录页
                         CenterLogo()
 
                         errorMsg?.let {
@@ -225,7 +225,7 @@ fun AuthScreen(
 
                     } else {
                         // =========================
-                        // 注册（普通方式）
+                        // 注册
                         // =========================
 
                         Text("账号", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -311,9 +311,9 @@ fun AuthScreen(
                                         else -> {
                                             val acc = regAccount.trim()
                                             authStore.register(userRole, acc, regPwd)
-                                            // ✅ 预填登录账号（更顺手）
+                                            // 预填登录账号（更顺手）
                                             loginAccount = acc
-                                            // 可选：清空登录密码，要求重新输入（更符合“再次登录”）
+                                            // 可选：清空登录密码，要求重新输入
                                             loginPassword = ""
                                             // 可选：把勾选同步过去（不想同步就删掉这行）
                                             loginAgree = regAgree
@@ -330,16 +330,13 @@ fun AuthScreen(
                             message = "账号已创建，请使用刚才的账号密码登录。",
                             confirmText = "去登录",
                             cancelText = "稍后",
-                            dismissOnClickOutside = false, // ✅ 再保险一次
+                            dismissOnClickOutside = false, // 再保险一次
                             onConfirm = {
                                 showRegisterSuccessDialog = false
-
                                 clearRegisterFields()
-
-                                // ✅ 切换到登录页
+                                // 切换到登录页
                                 tab = 0
-
-                                // （可选）清空登录密码，让用户重新输入更符合“再次登录”
+                                // 清空登录密码，让用户重新输入更符合“再次登录”
                                 loginPassword = ""
                             },
                             onCancel = {
@@ -543,7 +540,7 @@ private fun LegalSheetContent(
             .imePadding()
             .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
-        // ✅ 只保留标题，不要右上角关闭
+        // 只保留标题，不要右上角关闭
         Text(
             title,
             style = MaterialTheme.typography.titleLarge,

@@ -9,7 +9,7 @@ object Destinations {
     const val ROLE_MERCHANT = "merchant"
     const val AUTH = "auth"
 
-    const val AUTH_ROUTE = "$AUTH/{$ARG_ROLE}"  // ✅ 带参数的完整 route
+    const val AUTH_ROUTE = "$AUTH/{$ARG_ROLE}"  // 带参数的完整 route
 
 
     // 两个主壳（底部导航）
@@ -28,7 +28,7 @@ object Destinations {
     const val MERCHANT_ASSIST = "merchant_assist"
     const val MERCHANT_PROFILE = "merchant_profile"
 
-    // 你后续已有的深链路页面（先保留占位，后面再接回你之前那套）
+    // 你后续已有的深链路页面（先保留占位）
     const val ARG_PRODUCT_ID = "productId"
 
     fun auth(role: String) = "$AUTH/$role"
