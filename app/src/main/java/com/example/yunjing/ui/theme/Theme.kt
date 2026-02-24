@@ -49,7 +49,7 @@ fun YunjingTheme(
 
     MaterialTheme(
         colorScheme = scheme,
-        typography = AppTypography,
+        typography = Typography,
         shapes = AppShapes,
         content = content
     )
