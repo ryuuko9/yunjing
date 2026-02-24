@@ -118,13 +118,13 @@ fun AuthScreen(
 
             Text(
                 text = "Hello!",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Black
+                style = MaterialTheme.typography.displayLarge,
+                fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = "欢迎来到云镜智联",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Black
+                fontWeight = FontWeight.SemiBold
             )
 
             Spacer(modifier = Modifier.height(55.dp))
@@ -544,7 +544,7 @@ private fun LegalSheetContent(
         Text(
             title,
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.SemiBold
         )
 
         Spacer(Modifier.height(12.dp))

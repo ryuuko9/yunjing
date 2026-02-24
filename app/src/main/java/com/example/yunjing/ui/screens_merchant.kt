@@ -899,7 +899,7 @@ private fun MerchantAvatar(
         Text(
             text = "匠",
             fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary
         )
     }

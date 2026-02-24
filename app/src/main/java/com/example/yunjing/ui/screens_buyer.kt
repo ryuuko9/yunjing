@@ -770,7 +770,7 @@ private fun BuyerAvatar(
         Text(
             text = "云",
             fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary
         )
     }
