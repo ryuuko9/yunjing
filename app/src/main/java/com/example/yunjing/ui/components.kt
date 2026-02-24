@@ -18,7 +18,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -121,7 +120,12 @@ fun AppTextField(
         onValueChange = onValueChange,
         singleLine = singleLine,
         maxLines = if (singleLine) 1 else Int.MAX_VALUE,
-        placeholder = { Text(placeholder) },
+        placeholder = {
+            Text(
+                text = placeholder,
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp)
+            )
+        },
         label = null,
         visualTransformation = visualTransformation,
         trailingIcon = {
@@ -144,7 +148,10 @@ fun AppTextField(
             .fillMaxWidth()
             .height(51.dp),
         shape = RoundedCornerShape(16.dp),
-        textStyle = TextStyle(fontSize = 15.sp, lineHeight = 18.sp),
+        textStyle = MaterialTheme.typography.bodyLarge.copy(
+            fontSize = 15.sp,
+            lineHeight = 18.sp
+        ),
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -344,16 +351,20 @@ fun AppCenterDialog(
                 ) {
                     Text(
                         text = title,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = message,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     )
 
                     Spacer(Modifier.height(16.dp))
@@ -374,9 +385,11 @@ fun AppCenterDialog(
                         ) {
                             Text(
                                 text = cancelText,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                             )
                         }
 
