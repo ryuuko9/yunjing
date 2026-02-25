@@ -50,7 +50,7 @@ fun BuyerAiAssistScreen() {
         if (messages.isEmpty()) {
             messages += ChatMsg(
                 role = ChatRole.Assistant,
-                text = "你好，我是云镜智联 AI 助手。\n你可以描述卡点/报错现象，或点下面快捷问题开始。"
+                text = "你好，我是云镜智联 AI 助手。\n你可以描述卡点/报错现象，或点快捷问题开始。"
             )
         }
     }
@@ -143,7 +143,7 @@ fun BuyerAiAssistScreen() {
                             AppTextField(
                                 value = input,
                                 onValueChange = { input = it },
-                                placeholder = "描述问题：例如“安装第3步卡住了，零件对不上”"
+                                placeholder = "描述问题："
                             )
                         }
 
