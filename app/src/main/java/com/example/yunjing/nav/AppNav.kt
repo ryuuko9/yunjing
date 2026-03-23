@@ -16,7 +16,7 @@ import com.example.yunjing.data.SessionState
 import com.example.yunjing.data.UserRole
 import com.example.yunjing.ui.AuthScreen
 import com.example.yunjing.ui.BuyerMainShell
-import com.example.yunjing.ui.MerchantMainShell
+import com.example.yunjing.ui.merchant.MerchantMainShell
 import com.example.yunjing.ui.RoleSelectScreen
 import kotlinx.coroutines.launch
 
