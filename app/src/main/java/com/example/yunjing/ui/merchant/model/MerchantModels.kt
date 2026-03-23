@@ -31,39 +31,59 @@ data class PendingUploadItem(
     val source: String
 )
 
-enum class MerchantAssetType {
-    IMAGE, VIDEO, MODEL
-}
-
-data class MerchantAssetItem(
-    val uri: Uri,
-    val type: MerchantAssetType,
-    val name: String,
-    val source: String
-)
-
 enum class ParseMode {
     EXPLODED_GUIDE,
     VIDEO_GUIDE
 }
 
-data class MerchantContentProject(
-    val id: String,
-    val name: String,
-    val status: String,
-    val summary: String
+data class ProjectModelItem(
+    val uri: Uri,
+    val name: String
 )
 
 data class RebuildResult(
     val modelName: String,
-    val modelAssetName: String,
-    val coverText: String,
     val statusText: String
 )
 
 data class ParseResult(
     val mode: ParseMode,
-    val explodedImageName: String? = null,
-    val tutorialVideoName: String? = null,
     val statusText: String
 )
+
+data class MerchantContentProject(
+    val id: String,
+    val name: String,
+    val status: String,
+    val summary: String,
+
+    val uploads: List<PendingUploadItem> = emptyList(),
+
+    val selectedRebuildUris: List<String> = emptyList(),
+
+    val parseMode: ParseMode = ParseMode.EXPLODED_GUIDE,
+    val selectedParseSourceUris: List<String> = emptyList(),
+    val parseModels: List<ProjectModelItem> = emptyList(),
+    val selectedParseModelUris: List<String> = emptyList(),
+
+    val isRebuilding: Boolean = false,
+    val rebuildProgress: Float = 0f,
+    val rebuildResult: RebuildResult? = null,
+
+    val isParsing: Boolean = false,
+    val parseProgress: Float = 0f,
+    val parseResult: ParseResult? = null
+)
+
+enum class ContentPageState {
+    PROJECT_LIST,
+    PROJECT_DETAIL,
+    MEDIA_FOLDER_MANAGE,
+    MEDIA_FOLDER_SELECT_REBUILD,
+    MEDIA_FOLDER_SELECT_PARSE
+}
+
+enum class ProjectMenuAction {
+    RENAME,
+    DELETE
+}

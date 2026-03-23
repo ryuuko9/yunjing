@@ -7,19 +7,25 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material3.*
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,14 +35,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.example.yunjing.ui.merchant.model.MerchantAssetItem
-import com.example.yunjing.ui.merchant.model.MerchantAssetType
 import com.example.yunjing.ui.merchant.model.MerchantContentProject
 import com.example.yunjing.ui.merchant.model.ParseMode
 import com.example.yunjing.ui.merchant.model.PendingMediaType
 import com.example.yunjing.ui.merchant.model.PendingUploadItem
+import com.example.yunjing.ui.merchant.model.ProjectModelItem
 import com.example.yunjing.ui.pressClick
-
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.*
 @Composable
 fun ContentRow(
     title: String,
@@ -62,6 +71,36 @@ fun ContentRow(
         StatusBadge(text = badge)
         Spacer(Modifier.width(8.dp))
         Text("›", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun ProjectListItem(
+    project: MerchantContentProject,
+    onClick: () -> Unit
+) {
+    SoftCard(modifier = Modifier.fillMaxWidth(), corner = 22.dp) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pressClick(onClick = onClick)
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(project.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "${project.summary} · ${project.status}",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            StatusBadge(text = project.status)
+            Spacer(Modifier.width(8.dp))
+            Text("›", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -113,122 +152,29 @@ fun PendingUploadRow(
 }
 
 @Composable
-fun ProjectHeaderCard(
-    project: MerchantContentProject?,
-    onNewProject: () -> Unit,
-    onPublish: () -> Unit,
-    canPublish: Boolean
+fun SelectableUploadRow(
+    item: PendingUploadItem,
+    selected: Boolean,
+    onToggle: () -> Unit,
+    onPreview: () -> Unit
 ) {
-    SoftCard(modifier = Modifier.fillMaxWidth(), corner = 26.dp) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text("项目工作区", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = project?.let { "当前项目：${it.name} · ${it.summary}" }
-                    ?: "当前未创建项目，请先新建后再进行上传、重建或解析。",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                lineHeight = 18.sp
-            )
-            Spacer(Modifier.height(14.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                MiniChip(
-                    text = "新建项目",
-                    icon = Icons.Filled.Inventory2,
-                    onClick = onNewProject,
-                    modifier = Modifier.weight(1f)
-                )
-                MiniChip(
-                    text = "发布",
-                    icon = Icons.Filled.AutoAwesome,
-                    onClick = onPublish,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            if (!canPublish) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "发布前置条件：当前项目需先完成上传、重建或解析中的至少一项成果。",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun WorkbenchSectionCard(
-    title: String,
-    desc: String,
-    actionText: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onAction: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    SoftCard(modifier = Modifier.fillMaxWidth(), corner = 24.dp) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        desc,
-                        fontSize = 12.sp,
-                        lineHeight = 18.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Spacer(Modifier.width(12.dp))
-                MiniChip(
-                    text = actionText,
-                    icon = icon,
-                    onClick = onAction
-                )
-            }
-
-            Spacer(Modifier.height(14.dp))
-            content()
-        }
-    }
-}
-
-@Composable
-fun AssetRow(
-    item: MerchantAssetItem,
-    onPreview: () -> Unit,
-    onRemove: () -> Unit
-) {
-    val icon = when (item.type) {
-        MerchantAssetType.IMAGE -> Icons.Filled.Image
-        MerchantAssetType.VIDEO -> Icons.Filled.Videocam
-        MerchantAssetType.MODEL -> Icons.Filled.ViewInAr
-    }
-
-    val typeText = when (item.type) {
-        MerchantAssetType.IMAGE -> "图片"
-        MerchantAssetType.VIDEO -> "视频"
-        MerchantAssetType.MODEL -> "模型"
-    }
+    val typeText = if (item.type == PendingMediaType.IMAGE) "图片" else "视频"
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .pressClick(onClick = onToggle)
+            .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(10.dp))
+        Checkbox(
+            checked = selected,
+            onCheckedChange = { onToggle() }
+        )
+
+        Spacer(Modifier.width(8.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(item.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
@@ -243,6 +189,43 @@ fun AssetRow(
         TextButton(onClick = onPreview) {
             Text("预览")
         }
+    }
+}
+
+@Composable
+fun ModelFileRow(
+    item: ProjectModelItem,
+    selected: Boolean,
+    onToggle: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            .pressClick(onClick = onToggle)
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = selected,
+            onCheckedChange = { onToggle() }
+        )
+
+        Spacer(Modifier.width(8.dp))
+        Icon(Icons.Filled.ViewInAr, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(10.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(item.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                ".glb 模型文件",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
         Box(
             modifier = Modifier
@@ -253,6 +236,42 @@ fun AssetRow(
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Filled.Close, contentDescription = "删除", tint = Color(0xFFFF3B30))
+        }
+    }
+}
+
+@Composable
+fun WorkbenchSectionCard(
+    title: String,
+    desc: String,
+    actionArea: @Composable RowScope.() -> Unit = {},
+    content: @Composable ColumnScope.() -> Unit
+) {
+    SoftCard(modifier = Modifier.fillMaxWidth(), corner = 24.dp) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        desc,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    content = actionArea
+                )
+            }
+
+            Spacer(Modifier.height(14.dp))
+            content()
         }
     }
 }
@@ -403,83 +422,6 @@ fun UploadEntrySheet(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UploadTypeSheet(
-    title: String,
-    onDismiss: () -> Unit,
-    onImageClick: () -> Unit,
-    onVideoClick: () -> Unit
-) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(title, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-
-            SheetActionItem(
-                icon = Icons.Filled.Image,
-                title = "照片",
-                subtitle = "选择图片文件",
-                onClick = onImageClick
-            )
-
-            SheetActionItem(
-                icon = Icons.Filled.Videocam,
-                title = "视频",
-                subtitle = "选择视频文件",
-                onClick = onVideoClick
-            )
-
-            Spacer(Modifier.height(8.dp))
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ContinueAddSheet(
-    type: PendingMediaType,
-    onDismiss: () -> Unit,
-    onPickClick: () -> Unit,
-    onCaptureClick: () -> Unit
-) {
-    val title = if (type == PendingMediaType.IMAGE) "继续添加照片" else "继续添加视频"
-    val pickText = if (type == PendingMediaType.IMAGE) "从本地选择照片" else "从本地选择视频"
-    val captureText = if (type == PendingMediaType.IMAGE) "继续拍摄照片" else "继续拍摄视频"
-    val icon2 = if (type == PendingMediaType.IMAGE) Icons.Filled.PhotoCamera else Icons.Filled.Videocam
-
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(title, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-
-            SheetActionItem(
-                icon = Icons.Filled.UploadFile,
-                title = "上传",
-                subtitle = pickText,
-                onClick = onPickClick
-            )
-
-            SheetActionItem(
-                icon = icon2,
-                title = "拍摄",
-                subtitle = captureText,
-                onClick = onCaptureClick
-            )
-
-            Spacer(Modifier.height(8.dp))
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 fun MediaPreviewSheet(
     item: PendingUploadItem,
     onDismiss: () -> Unit
@@ -496,52 +438,207 @@ fun MediaPreviewSheet(
             Text(item.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(6.dp))
             Text(
-                "${if (item.type == PendingMediaType.IMAGE) "图片" else "视频"} · ${item.source}",
+                text = if (item.type == PendingMediaType.IMAGE) "图片预览" else "视频预览",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(14.dp))
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
-                contentAlignment = Alignment.Center
-            ) {
-                if (item.type == PendingMediaType.IMAGE) {
-                    AndroidView(
-                        factory = { context ->
-                            ImageView(context).apply {
-                                scaleType = ImageView.ScaleType.CENTER_CROP
-                                setImageURI(item.uri)
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    AndroidView(
-                        factory = { context ->
-                            VideoView(context).apply {
-                                setVideoURI(item.uri)
-                                setOnPreparedListener { mp ->
-                                    mp.isLooping = true
-                                    start()
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+            if (item.type == PendingMediaType.IMAGE) {
+                ImagePreviewContent(uri = item.uri)
+            } else {
+                VideoPreviewContent(uri = item.uri)
             }
 
-            Spacer(Modifier.height(14.dp))
-            PrimaryPillButton(
-                text = "关闭预览",
-                onClick = onDismiss
+            Spacer(Modifier.height(20.dp))
+        }
+    }
+}
+
+@Composable
+private fun ImagePreviewContent(uri: Uri) {
+    AndroidView(
+        factory = {
+            ImageView(it).apply {
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                adjustViewBounds = true
+                setImageURI(uri)
+            }
+        },
+        update = { it.setImageURI(uri) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(320.dp)
+    )
+}
+
+@Composable
+private fun VideoPreviewContent(uri: Uri) {
+    AndroidView(
+        factory = {
+            VideoView(it).apply {
+                setVideoURI(uri)
+                setOnPreparedListener { mp ->
+                    mp.isLooping = true
+                    start()
+                }
+            }
+        },
+        update = { videoView ->
+            videoView.setVideoURI(uri)
+            videoView.setOnPreparedListener { mp ->
+                mp.isLooping = true
+                videoView.start()
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(320.dp)
+    )
+}
+
+@Composable
+fun CreateProjectDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var projectName by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("新建项目") },
+        text = {
+            OutlinedTextField(
+                value = projectName,
+                onValueChange = { projectName = it },
+                label = { Text("项目名称") },
+                singleLine = true
             )
-            Spacer(Modifier.height(14.dp))
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val finalName = projectName.trim().ifEmpty { "未命名项目" }
+                    onConfirm(finalName)
+                }
+            ) {
+                Text("创建")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
+@Composable
+fun RenameProjectDialog(
+    currentName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var projectName by remember { mutableStateOf(currentName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("项目设置") },
+        text = {
+            OutlinedTextField(
+                value = projectName,
+                onValueChange = { projectName = it },
+                label = { Text("项目名称") },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val finalName = projectName.trim().ifEmpty { currentName }
+                    onConfirm(finalName)
+                }
+            ) {
+                Text("保存")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
+@Composable
+fun MaterialFolderCard(
+    mediaCount: Int,
+    onClick: () -> Unit
+) {
+    SoftCard(modifier = Modifier.fillMaxWidth(), corner = 24.dp) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pressClick(onClick = onClick)
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Filled.Description,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text("素材文件夹", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "共 $mediaCount 个素材，可统一预览、删除与选择",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Text("›", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+fun ProjectSettingMenu(
+    modifier: Modifier = Modifier,
+    onRename: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        MiniChip(
+            text = "项目设置",
+            icon = Icons.Filled.Description,
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("重命名项目") },
+                onClick = {
+                    expanded = false
+                    onRename()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("删除项目") },
+                onClick = {
+                    expanded = false
+                    onDelete()
+                }
+            )
         }
     }
 }

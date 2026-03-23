@@ -44,7 +44,7 @@ fun MerchantAssistScreen() {
                 Spacer(Modifier.height(14.dp))
                 PrimaryPillButton(
                     text = "进入待处理队列",
-                    onClick = {}
+                    onClick = {},
                 )
             }
         }

@@ -54,7 +54,7 @@ fun SoftCard(
 @Composable
 fun PrimaryPillButton(
     text: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val shape = RoundedCornerShape(16.dp)
     Box(

@@ -77,7 +77,7 @@ fun MerchantDashboardScreen(
         ) {
             QuickActionCard(
                 title = "上传内容",
-                desc = "说明书/\n教程视频",
+                desc = "说明书\n教程视频",
                 icon = Icons.Filled.UploadFile,
                 onClick = onGoContent,
                 modifier = Modifier.weight(1f)
