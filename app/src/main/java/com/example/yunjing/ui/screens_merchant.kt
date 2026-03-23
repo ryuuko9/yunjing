@@ -575,7 +575,7 @@ private fun MerchantAssistScreen() {
         Text("远程协助", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(6.dp))
         Text(
-            "接入会话、查看 AI 步骤、发送标注（后续接入）",
+            "接入会话、查看 AI 步骤、发送标注",
             fontSize = 13.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -602,7 +602,7 @@ private fun MerchantAssistScreen() {
 
         Spacer(Modifier.height(14.dp))
 
-        SoftCard(modifier = Modifier.fillMaxWidth()) {
+        /* SoftCard(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth()) {
                 Text("提示", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(6.dp))
@@ -613,7 +613,7 @@ private fun MerchantAssistScreen() {
                     lineHeight = 18.sp
                 )
             }
-        }
+        }*/
     }
 }
 
