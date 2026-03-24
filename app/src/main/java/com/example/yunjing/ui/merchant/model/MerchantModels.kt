@@ -72,7 +72,9 @@ data class MerchantContentProject(
 
     val isParsing: Boolean = false,
     val parseProgress: Float = 0f,
-    val parseResult: ParseResult? = null
+
+    val explodedGuideResult: ParseResult? = null,
+    val videoGuideResult: ParseResult? = null,
 )
 
 enum class ContentPageState {

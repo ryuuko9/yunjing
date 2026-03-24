@@ -9,6 +9,7 @@ import com.example.yunjing.ui.merchant.screen.MerchantAssistScreen
 import com.example.yunjing.ui.merchant.screen.MerchantContentScreen
 import com.example.yunjing.ui.merchant.screen.MerchantDashboardScreen
 import com.example.yunjing.ui.merchant.screen.MerchantProfileScreen
+import com.example.yunjing.ui.merchant.viewmodel.MerchantContentViewModel
 
 // 导航单独管理
 
@@ -17,7 +18,8 @@ fun MerchantNavHost(
     nav: NavHostController,
     username: String,
     onSwitchRole: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    contentViewModel: MerchantContentViewModel
 ) {
     NavHost(
         navController = nav,
@@ -30,7 +32,7 @@ fun MerchantNavHost(
             )
         }
         composable(Destinations.MERCHANT_CONTENT) {
-            MerchantContentScreen()
+            MerchantContentScreen(viewModel = contentViewModel)
         }
         composable(Destinations.MERCHANT_ASSIST) {
             MerchantAssistScreen()

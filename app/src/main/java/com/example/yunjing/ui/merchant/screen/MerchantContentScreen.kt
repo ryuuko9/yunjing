@@ -9,7 +9,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -49,7 +48,6 @@ import com.example.yunjing.ui.merchant.component.MediaPreviewSheet
 import com.example.yunjing.ui.merchant.component.MiniChip
 import com.example.yunjing.ui.merchant.component.ModelFileRow
 import com.example.yunjing.ui.merchant.component.PendingUploadRow
-import com.example.yunjing.ui.merchant.component.ParseResultCard
 import com.example.yunjing.ui.merchant.component.PrimaryPillButton
 import com.example.yunjing.ui.merchant.component.ProgressBlock
 import com.example.yunjing.ui.merchant.component.ProjectListItem
@@ -70,90 +68,35 @@ import com.example.yunjing.ui.merchant.model.ProjectModelItem
 import com.example.yunjing.ui.merchant.model.RebuildResult
 import com.example.yunjing.ui.merchant.util.createImageUri
 import kotlinx.coroutines.delay
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import com.example.yunjing.ui.merchant.component.ProjectSettingMenu
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.yunjing.ui.merchant.viewmodel.MerchantContentViewModel
 
 private const val UNITY_PLAYER_PACKAGE = "com.example.yunjing.tutorialplayer"
 
 @Composable
-fun MerchantContentScreen() {
+fun MerchantContentScreen(
+    viewModel: MerchantContentViewModel
+) {
     val context = LocalContext.current
+    val projectDetailListState = rememberLazyListState()
+    val mediaManageListState = rememberLazyListState()
+    val rebuildSelectListState = rememberLazyListState()
+    val parseSelectListState = rememberLazyListState()
 
-    val projects = remember {
-        mutableStateListOf(
-            MerchantContentProject(
-                id = "project_1",
-                name = "螺旋风扇安装教程",
-                status = "已发布",
-                summary = "版本 v1.2"
-            )
-        )
-    }
-
-    var selectedProjectId by remember { mutableStateOf<String?>(null) }
-    var pageState by remember { mutableStateOf(ContentPageState.PROJECT_LIST) }
-    var showCreateProjectDialog by remember { mutableStateOf(false) }
-    var showRenameProjectDialog by remember { mutableStateOf(false) }
-    var showEntrySheet by remember { mutableStateOf(false) }
-    var previewItem by remember { mutableStateOf<PendingUploadItem?>(null) }
-
-    var currentCaptureImageUri by remember { mutableStateOf<Uri?>(null) }
-    var pendingCameraAction by remember { mutableStateOf<(() -> Unit)?>(null) }
-
-    val currentProject = projects.find { it.id == selectedProjectId }
-
-    var showDeleteProjectDialog by remember { mutableStateOf(false) }
-
-    val recentItems = remember {
-        listOf(
-            ContentItem("桌面支架拆装说明", "版本 v0.9 · 待优化", "待解析"),
-            ContentItem("蓝牙音箱教学内容", "版本 v1.0 · 审核中", "待审核")
-        )
-    }
-
-    fun updateProject(projectId: String, transform: (MerchantContentProject) -> MerchantContentProject) {
-        val index = projects.indexOfFirst { it.id == projectId }
-        if (index >= 0) {
-            projects[index] = transform(projects[index])
-        }
-    }
-
-    fun createProject(projectName: String) {
-        val nextIndex = projects.size + 1
-        val finalName = projectName.trim().ifEmpty { "未命名项目$nextIndex" }
-
-        val newProject = MerchantContentProject(
-            id = "project_$nextIndex",
-            name = finalName,
-            status = "编辑中",
-            summary = "待上传内容"
-        )
-        projects.add(0, newProject)
-        selectedProjectId = newProject.id
-        pageState = ContentPageState.PROJECT_DETAIL
-        Toast.makeText(context, "已创建项目：$finalName", Toast.LENGTH_SHORT).show()
-    }
-
-    fun renameCurrentProject(newName: String) {
-        val project = currentProject ?: return
-        updateProject(project.id) {
-            it.copy(name = newName.trim().ifEmpty { it.name })
-        }
-        Toast.makeText(context, "项目名称已更新", Toast.LENGTH_SHORT).show()
-    }
-
-    fun deleteCurrentProject() {
-        val project = currentProject ?: return
-        projects.removeAll { it.id == project.id }
-        selectedProjectId = null
-        pageState = ContentPageState.PROJECT_LIST
-        Toast.makeText(context, "项目已删除", Toast.LENGTH_SHORT).show()
-    }
+    val projects = viewModel.projects
+    val selectedProjectId = viewModel.selectedProjectId
+    val pageState = viewModel.pageState
+    val showCreateProjectDialog = viewModel.showCreateProjectDialog
+    val showRenameProjectDialog = viewModel.showRenameProjectDialog
+    val showDeleteProjectDialog = viewModel.showDeleteProjectDialog
+    val showEntrySheet = viewModel.showEntrySheet
+    val previewItem = viewModel.previewItem
+    val currentCaptureImageUri = viewModel.currentCaptureImageUri
+    val pendingCameraAction = viewModel.pendingCameraAction
+    val currentProject = viewModel.currentProject()
+    val recentItems = viewModel.recentItems
 
     fun normalizeUploads(list: List<PendingUploadItem>): List<PendingUploadItem> {
         var imageCount = 0
@@ -208,7 +151,7 @@ fun MerchantContentScreen() {
             )
         }
 
-        updateProject(project.id) {
+        viewModel.updateProject(project.id) {
             val merged = it.uploads + newItems
             it.copy(
                 uploads = merged,
@@ -219,7 +162,7 @@ fun MerchantContentScreen() {
 
     fun removeUploadFromCurrentProject(item: PendingUploadItem) {
         val project = currentProject ?: return
-        updateProject(project.id) {
+        viewModel.updateProject(project.id) {
             val remainingUploads = normalizeUploads(it.uploads.filterNot { upload -> upload.uri == item.uri })
             val validUploadUris = remainingUploads.map { upload -> upload.uri.toString() }.toSet()
 
@@ -234,13 +177,14 @@ fun MerchantContentScreen() {
 
     fun clearUploadsOfCurrentProject() {
         val project = currentProject ?: return
-        updateProject(project.id) {
+        viewModel.updateProject(project.id) {
             it.copy(
                 uploads = emptyList(),
                 selectedRebuildUris = emptyList(),
                 selectedParseSourceUris = emptyList(),
                 rebuildResult = null,
-                parseResult = null,
+                explodedGuideResult = null,
+                videoGuideResult = null,
                 rebuildProgress = 0f,
                 parseProgress = 0f,
                 summary = "待上传内容"
@@ -254,7 +198,7 @@ fun MerchantContentScreen() {
         val current = project.selectedRebuildUris.toMutableList()
         if (current.contains(key)) current.remove(key) else current.add(key)
 
-        updateProject(project.id) {
+        viewModel.updateProject(project.id) {
             it.copy(selectedRebuildUris = current)
         }
     }
@@ -265,7 +209,7 @@ fun MerchantContentScreen() {
         val current = project.selectedParseSourceUris.toMutableList()
         if (current.contains(key)) current.remove(key) else current.add(key)
 
-        updateProject(project.id) {
+        viewModel.updateProject(project.id) {
             it.copy(selectedParseSourceUris = current)
         }
     }
@@ -276,7 +220,7 @@ fun MerchantContentScreen() {
         val current = project.selectedParseModelUris.toMutableList()
         if (current.contains(key)) current.remove(key) else current.add(key)
 
-        updateProject(project.id) {
+        viewModel.updateProject(project.id) {
             it.copy(selectedParseModelUris = current)
         }
     }
@@ -284,7 +228,7 @@ fun MerchantContentScreen() {
     fun removeParseModel(uri: Uri) {
         val project = currentProject ?: return
         val key = uri.toString()
-        updateProject(project.id) {
+        viewModel.updateProject(project.id) {
             it.copy(
                 parseModels = it.parseModels.filterNot { model -> model.uri == uri },
                 selectedParseModelUris = it.selectedParseModelUris.filterNot { selected -> selected == key }
@@ -297,7 +241,7 @@ fun MerchantContentScreen() {
     ) { granted ->
         if (granted) {
             pendingCameraAction?.invoke()
-            pendingCameraAction = null
+            viewModel.pendingCameraAction = null
         } else {
             Toast.makeText(context, "未授予相机权限，无法拍摄", Toast.LENGTH_SHORT).show()
         }
@@ -312,7 +256,7 @@ fun MerchantContentScreen() {
         if (granted) {
             onGranted()
         } else {
-            pendingCameraAction = onGranted
+            viewModel.pendingCameraAction = onGranted
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
@@ -344,7 +288,7 @@ fun MerchantContentScreen() {
             Toast.makeText(context, "当前仅建议选择 .glb 模型文件", Toast.LENGTH_SHORT).show()
         }
 
-        updateProject(project.id) {
+        viewModel.updateProject(project.id) {
             val append = validModels.mapIndexed { index, uri ->
                 val name = "模型 ${it.parseModels.size + index + 1}.glb"
                 ProjectModelItem(uri = uri, name = name)
@@ -356,7 +300,7 @@ fun MerchantContentScreen() {
     fun launchTakePhoto() {
         ensureCameraPermission {
             val uri = createImageUri(context)
-            currentCaptureImageUri = uri
+            viewModel.currentCaptureImageUri = uri
             takePhotoLauncher.launch(uri)
         }
     }
@@ -383,11 +327,11 @@ fun MerchantContentScreen() {
         if (project.isRebuilding) {
             repeat(20) { index ->
                 delay(140)
-                updateProject(project.id) {
+                viewModel.updateProject(project.id) {
                     it.copy(rebuildProgress = (index + 1) / 20f)
                 }
             }
-            updateProject(project.id) {
+            viewModel.updateProject(project.id) {
                 it.copy(
                     isRebuilding = false,
                     rebuildProgress = 1f,
@@ -408,26 +352,40 @@ fun MerchantContentScreen() {
         if (project.isParsing) {
             repeat(24) { index ->
                 delay(120)
-                updateProject(project.id) {
+                viewModel.updateProject(project.id) {
                     it.copy(parseProgress = (index + 1) / 24f)
                 }
             }
-            updateProject(project.id) {
-                it.copy(
-                    isParsing = false,
-                    parseProgress = 1f,
-                    parseResult = ParseResult(
-                        mode = it.parseMode,
-                        statusText = if (it.parseMode == ParseMode.EXPLODED_GUIDE) {
-                            "已完成 fake 解析，当前展示爆炸图说明书占位结果。"
-                        } else {
-                            "已完成 fake 解析，当前可跳转 Unity 教程播放器查看预置安装视频。"
-                        }
-                    ),
-                    status = "待发布",
-                    summary = "解析结果已生成"
+
+            viewModel.updateProject(project.id) {
+                val result = ParseResult(
+                    mode = it.parseMode,
+                    statusText = if (it.parseMode == ParseMode.EXPLODED_GUIDE) {
+                        "已完成 fake 解析，爆炸图说明书结果已生成，可重复查看。"
+                    } else {
+                        "已完成 fake 解析，教程播放器入口已生成，可重复打开。"
+                    }
                 )
+
+                if (it.parseMode == ParseMode.EXPLODED_GUIDE) {
+                    it.copy(
+                        isParsing = false,
+                        parseProgress = 1f,
+                        explodedGuideResult = result,
+                        status = "待发布",
+                        summary = "解析结果已生成"
+                    )
+                } else {
+                    it.copy(
+                        isParsing = false,
+                        parseProgress = 1f,
+                        videoGuideResult = result,
+                        status = "待发布",
+                        summary = "解析结果已生成"
+                    )
+                }
             }
+
             Toast.makeText(context, "解析完成", Toast.LENGTH_SHORT).show()
         }
     }
@@ -460,7 +418,7 @@ fun MerchantContentScreen() {
                             MiniChip(
                                 text = "新建项目",
                                 icon = Icons.Filled.Add,
-                                onClick = { showCreateProjectDialog = true },
+                                onClick = { viewModel.showCreateProjectDialog = true },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -475,8 +433,8 @@ fun MerchantContentScreen() {
                     ProjectListItem(
                         project = project,
                         onClick = {
-                            selectedProjectId = project.id
-                            pageState = ContentPageState.PROJECT_DETAIL
+                            viewModel.selectedProjectId = project.id
+                            viewModel.pageState = ContentPageState.PROJECT_DETAIL
                         }
                     )
                     Spacer(Modifier.height(10.dp))
@@ -509,12 +467,15 @@ fun MerchantContentScreen() {
 
         ContentPageState.PROJECT_DETAIL -> {
             if (currentProject == null) {
-                selectedProjectId = null
-                pageState = ContentPageState.PROJECT_LIST
+                viewModel.selectedProjectId = null
+                viewModel.pageState = ContentPageState.PROJECT_LIST
             } else {
-                val canPublish = currentProject.rebuildResult != null || currentProject.parseResult != null
+                val canPublish = currentProject.rebuildResult != null ||
+                        currentProject.explodedGuideResult != null ||
+                        currentProject.videoGuideResult != null
 
                 LazyColumn(
+                    state = projectDetailListState,
                     modifier = Modifier
                         .fillMaxSize()
                         .statusBarsPadding()
@@ -532,8 +493,8 @@ fun MerchantContentScreen() {
                                 text = "返回项目列表",
                                 icon = Icons.AutoMirrored.Filled.ArrowBack,
                                 onClick = {
-                                    selectedProjectId = null
-                                    pageState = ContentPageState.PROJECT_LIST
+                                    viewModel.selectedProjectId = null
+                                    viewModel.pageState = ContentPageState.PROJECT_LIST
                                 },
                                 modifier = Modifier.weight(1f)
                             )
@@ -541,10 +502,10 @@ fun MerchantContentScreen() {
                             ProjectSettingMenu(
                                 modifier = Modifier.weight(1f),
                                 onRename = {
-                                    showRenameProjectDialog = true
+                                    viewModel.showRenameProjectDialog = true
                                 },
                                 onDelete = {
-                                    showDeleteProjectDialog = true
+                                    viewModel.showDeleteProjectDialog = true
                                 }
                             )
                         }
@@ -568,7 +529,7 @@ fun MerchantContentScreen() {
                             MaterialFolderCard(
                                 mediaCount = currentProject.uploads.size,
                                 onClick = {
-                                    pageState = ContentPageState.MEDIA_FOLDER_MANAGE
+                                    viewModel.pageState = ContentPageState.MEDIA_FOLDER_MANAGE
                                 }
                             )
                         }
@@ -581,7 +542,7 @@ fun MerchantContentScreen() {
                             actionArea = {}
                         ) {
                             MiniChip(
-                                text = "进入素材文件夹选择重建素材",
+                                text = "进入素材文件夹选择重建图片",
                                 icon = Icons.Filled.ViewInAr,
                                 onClick = {
                                     if (currentProject.uploads.isEmpty()) {
@@ -591,7 +552,7 @@ fun MerchantContentScreen() {
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     } else {
-                                        pageState = ContentPageState.MEDIA_FOLDER_SELECT_REBUILD
+                                        viewModel.pageState = ContentPageState.MEDIA_FOLDER_SELECT_REBUILD
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth()
@@ -615,7 +576,7 @@ fun MerchantContentScreen() {
                                         text = "清空选择",
                                         icon = Icons.Filled.ClearAll,
                                         onClick = {
-                                            updateProject(currentProject.id) {
+                                            viewModel.updateProject(currentProject.id) {
                                                 it.copy(
                                                     selectedRebuildUris = emptyList(),
                                                     rebuildResult = null,
@@ -629,8 +590,16 @@ fun MerchantContentScreen() {
                                         text = "开始重建",
                                         icon = Icons.Filled.ViewInAr,
                                         onClick = {
-                                            if (!currentProject.isRebuilding) {
-                                                updateProject(currentProject.id) {
+                                            val selectedItems = currentProject.uploads.filter { upload ->
+                                                currentProject.selectedRebuildUris.contains(upload.uri.toString())
+                                            }
+
+                                            if (selectedItems.isEmpty()) {
+                                                Toast.makeText(context, "请先选择图片素材后再开始重建", Toast.LENGTH_SHORT).show()
+                                            } else if (selectedItems.any { it.type != PendingMediaType.IMAGE }) {
+                                                Toast.makeText(context, "重建仅支持图片素材，请重新选择", Toast.LENGTH_SHORT).show()
+                                            } else if (!currentProject.isRebuilding) {
+                                                viewModel.updateProject(currentProject.id) {
                                                     it.copy(
                                                         isRebuilding = true,
                                                         rebuildProgress = 0f,
@@ -683,7 +652,7 @@ fun MerchantContentScreen() {
                                     },
                                     icon = Icons.Filled.Description,
                                     onClick = {
-                                        updateProject(currentProject.id) {
+                                        viewModel.updateProject(currentProject.id) {
                                             it.copy(
                                                 parseMode = if (it.parseMode == ParseMode.EXPLODED_GUIDE) {
                                                     ParseMode.VIDEO_GUIDE
@@ -691,7 +660,6 @@ fun MerchantContentScreen() {
                                                     ParseMode.EXPLODED_GUIDE
                                                 },
                                                 selectedParseSourceUris = emptyList(),
-                                                parseResult = null,
                                                 parseProgress = 0f
                                             )
                                         }
@@ -712,7 +680,11 @@ fun MerchantContentScreen() {
                             Spacer(Modifier.height(12.dp))
 
                             MiniChip(
-                                text = "进入素材文件夹选择解析素材",
+                                text = if (currentProject.parseMode == ParseMode.EXPLODED_GUIDE) {
+                                    "进入素材文件夹选择说明书图片"
+                                } else {
+                                    "进入素材文件夹选择解析视频"
+                                },
                                 icon = Icons.Filled.Description,
                                 onClick = {
                                     if (currentProject.uploads.isEmpty()) {
@@ -722,7 +694,7 @@ fun MerchantContentScreen() {
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     } else {
-                                        pageState = ContentPageState.MEDIA_FOLDER_SELECT_PARSE
+                                        viewModel.pageState = ContentPageState.MEDIA_FOLDER_SELECT_PARSE
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth()
@@ -744,11 +716,10 @@ fun MerchantContentScreen() {
                                     text = "清空解析选择",
                                     icon = Icons.Filled.ClearAll,
                                     onClick = {
-                                        updateProject(currentProject.id) {
+                                        viewModel.updateProject(currentProject.id) {
                                             it.copy(
                                                 selectedParseSourceUris = emptyList(),
                                                 selectedParseModelUris = emptyList(),
-                                                parseResult = null,
                                                 parseProgress = 0f
                                             )
                                         }
@@ -792,16 +763,33 @@ fun MerchantContentScreen() {
                             PrimaryPillButton(
                                 text = "开始解析",
                                 onClick = {
-                                    if (currentProject.selectedParseSourceUris.isEmpty()) {
-                                        Toast.makeText(context, "请先从素材文件夹中选择解析素材", Toast.LENGTH_SHORT).show()
+                                    val selectedParseItems = currentProject.uploads.filter { upload ->
+                                        currentProject.selectedParseSourceUris.contains(upload.uri.toString())
+                                    }
+
+                                    if (selectedParseItems.isEmpty()) {
+                                        Toast.makeText(
+                                            context,
+                                            if (currentProject.parseMode == ParseMode.EXPLODED_GUIDE) "请先选择说明书图片" else "请先选择解析视频",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else if (
+                                        currentProject.parseMode == ParseMode.EXPLODED_GUIDE &&
+                                        selectedParseItems.any { it.type != PendingMediaType.IMAGE }
+                                    ) {
+                                        Toast.makeText(context, "当前模式仅支持图片素材，请重新选择", Toast.LENGTH_SHORT).show()
+                                    } else if (
+                                        currentProject.parseMode == ParseMode.VIDEO_GUIDE &&
+                                        selectedParseItems.any { it.type != PendingMediaType.VIDEO }
+                                    ) {
+                                        Toast.makeText(context, "当前模式仅支持视频素材，请重新选择", Toast.LENGTH_SHORT).show()
                                     } else if (currentProject.selectedParseModelUris.isEmpty()) {
                                         Toast.makeText(context, "请至少选择一个模型文件", Toast.LENGTH_SHORT).show()
                                     } else if (!currentProject.isParsing) {
-                                        updateProject(currentProject.id) {
+                                        viewModel.updateProject(currentProject.id) {
                                             it.copy(
                                                 isParsing = true,
                                                 parseProgress = 0f,
-                                                parseResult = null
                                             )
                                         }
                                     }
@@ -817,13 +805,46 @@ fun MerchantContentScreen() {
                                 )
                             }
 
-                            if (currentProject.parseResult != null) {
+                            if (currentProject.explodedGuideResult != null) {
                                 Spacer(Modifier.height(12.dp))
-                                ParseResultCard(
-                                    mode = currentProject.parseResult.mode,
-                                    statusText = currentProject.parseResult.statusText,
-                                    onOpenVideo = { openUnityPlayer() }
-                                )
+                                SoftCard(modifier = Modifier.fillMaxWidth()) {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        Text("爆炸图结果", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(
+                                            currentProject.explodedGuideResult.statusText,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(Modifier.height(12.dp))
+                                        PrimaryPillButton(
+                                            text = "查看爆炸图",
+                                            onClick = {
+                                                Toast.makeText(context, "此处打开已生成的爆炸图说明书（占位）", Toast.LENGTH_SHORT).show()
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (currentProject.videoGuideResult != null) {
+                                Spacer(Modifier.height(12.dp))
+                                SoftCard(modifier = Modifier.fillMaxWidth()) {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        Text("教程播放器", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(
+                                            currentProject.videoGuideResult.statusText,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(Modifier.height(12.dp))
+                                        PrimaryPillButton(
+                                            text = "打开教程播放器",
+                                            onClick = { openUnityPlayer() }
+                                        )
+                                    }
+                                }
                             }
                         }
 
@@ -839,10 +860,10 @@ fun MerchantContentScreen() {
                                     if (!canPublish) {
                                         Toast.makeText(context, "请先完成重建或解析中的至少一项成果", Toast.LENGTH_SHORT).show()
                                     } else {
-                                        updateProject(currentProject.id) {
+                                        viewModel.updateProject(currentProject.id) {
                                             it.copy(
                                                 status = "已发布",
-                                                summary = "版本 v1.0 · 已发布"
+                                                summary = "版本 v1.0"
                                             )
                                         }
                                         Toast.makeText(context, "发布成功（当前为本地占位逻辑）", Toast.LENGTH_SHORT).show()
@@ -857,10 +878,11 @@ fun MerchantContentScreen() {
 
         ContentPageState.MEDIA_FOLDER_MANAGE -> {
             if (currentProject == null) {
-                selectedProjectId = null
-                pageState = ContentPageState.PROJECT_LIST
+                viewModel.selectedProjectId = null
+                viewModel.pageState = ContentPageState.PROJECT_LIST
             } else {
                 LazyColumn(
+                    state = mediaManageListState,
                     modifier = Modifier
                         .fillMaxSize()
                         .statusBarsPadding()
@@ -877,13 +899,13 @@ fun MerchantContentScreen() {
                             MiniChip(
                                 text = "返回项目",
                                 icon = Icons.AutoMirrored.Filled.ArrowBack,
-                                onClick = { pageState = ContentPageState.PROJECT_DETAIL },
+                                onClick = { viewModel.pageState = ContentPageState.PROJECT_DETAIL },
                                 modifier = Modifier.weight(1f)
                             )
                             MiniChip(
                                 text = "添加素材",
                                 icon = Icons.Filled.Add,
-                                onClick = { showEntrySheet = true },
+                                onClick = { viewModel.showEntrySheet = true },
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -923,7 +945,7 @@ fun MerchantContentScreen() {
                         items(currentProject.uploads) { item ->
                             PendingUploadRow(
                                 item = item,
-                                onPreview = { previewItem = item },
+                                onPreview = { viewModel.previewItem = item },
                                 onRemove = { removeUploadFromCurrentProject(item) }
                             )
                             Spacer(Modifier.height(10.dp))
@@ -935,10 +957,12 @@ fun MerchantContentScreen() {
 
         ContentPageState.MEDIA_FOLDER_SELECT_REBUILD -> {
             if (currentProject == null) {
-                selectedProjectId = null
-                pageState = ContentPageState.PROJECT_LIST
+                viewModel.selectedProjectId = null
+                viewModel.pageState = ContentPageState.PROJECT_LIST
             } else {
+                val rebuildCandidates = currentProject.uploads.filter { it.type == PendingMediaType.IMAGE }
                 LazyColumn(
+                    state = rebuildSelectListState,
                     modifier = Modifier
                         .fillMaxSize()
                         .statusBarsPadding()
@@ -951,7 +975,7 @@ fun MerchantContentScreen() {
                         MiniChip(
                             text = "返回项目",
                             icon = Icons.AutoMirrored.Filled.ArrowBack,
-                            onClick = { pageState = ContentPageState.PROJECT_DETAIL },
+                            onClick = { viewModel.pageState = ContentPageState.PROJECT_DETAIL },
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -966,14 +990,25 @@ fun MerchantContentScreen() {
                         Spacer(Modifier.height(18.dp))
                     }
 
-                    items(currentProject.uploads) { item ->
-                        SelectableUploadRow(
-                            item = item,
-                            selected = currentProject.selectedRebuildUris.contains(item.uri.toString()),
-                            onToggle = { toggleRebuildMedia(item.uri) },
-                            onPreview = { previewItem = item }
-                        )
-                        Spacer(Modifier.height(10.dp))
+                    if (rebuildCandidates.isEmpty()) {
+                        item {
+                            Text(
+                                "当前项目没有可用于重建的图片素材，请先在素材文件夹中上传图片。",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(12.dp))
+                        }
+                    } else {
+                        items(rebuildCandidates) { item ->
+                            SelectableUploadRow(
+                                item = item,
+                                selected = currentProject.selectedRebuildUris.contains(item.uri.toString()),
+                                onToggle = { toggleRebuildMedia(item.uri) },
+                                onPreview = { viewModel.previewItem = item }
+                            )
+                            Spacer(Modifier.height(10.dp))
+                        }
                     }
 
                     item {
@@ -981,7 +1016,7 @@ fun MerchantContentScreen() {
                         PrimaryPillButton(
                             text = "确认重建选择",
                             onClick = {
-                                pageState = ContentPageState.PROJECT_DETAIL
+                                viewModel.pageState = ContentPageState.PROJECT_DETAIL
                             },
                         )
                     }
@@ -991,10 +1026,16 @@ fun MerchantContentScreen() {
 
         ContentPageState.MEDIA_FOLDER_SELECT_PARSE -> {
             if (currentProject == null) {
-                selectedProjectId = null
-                pageState = ContentPageState.PROJECT_LIST
+                viewModel.selectedProjectId = null
+                viewModel.pageState = ContentPageState.PROJECT_LIST
             } else {
+                val parseCandidates = if (currentProject.parseMode == ParseMode.EXPLODED_GUIDE) {
+                    currentProject.uploads.filter { it.type == PendingMediaType.IMAGE }
+                } else {
+                    currentProject.uploads.filter { it.type == PendingMediaType.VIDEO }
+                }
                 LazyColumn(
+                    state = parseSelectListState,
                     modifier = Modifier
                         .fillMaxSize()
                         .statusBarsPadding()
@@ -1007,7 +1048,7 @@ fun MerchantContentScreen() {
                         MiniChip(
                             text = "返回项目",
                             icon = Icons.AutoMirrored.Filled.ArrowBack,
-                            onClick = { pageState = ContentPageState.PROJECT_DETAIL },
+                            onClick = { viewModel.pageState = ContentPageState.PROJECT_DETAIL },
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -1022,14 +1063,29 @@ fun MerchantContentScreen() {
                         Spacer(Modifier.height(18.dp))
                     }
 
-                    items(currentProject.uploads) { item ->
-                        SelectableUploadRow(
-                            item = item,
-                            selected = currentProject.selectedParseSourceUris.contains(item.uri.toString()),
-                            onToggle = { toggleParseSource(item.uri) },
-                            onPreview = { previewItem = item }
-                        )
-                        Spacer(Modifier.height(10.dp))
+                    if (parseCandidates.isEmpty()) {
+                        item {
+                            Text(
+                                text = if (currentProject.parseMode == ParseMode.EXPLODED_GUIDE) {
+                                    "当前项目没有可用于解析的说明书图片，请先在素材文件夹中上传图片。"
+                                } else {
+                                    "当前项目没有可用于解析的视频素材，请先在素材文件夹中上传视频。"
+                                },
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(12.dp))
+                        }
+                    } else {
+                        items(parseCandidates) { item ->
+                            SelectableUploadRow(
+                                item = item,
+                                selected = currentProject.selectedParseSourceUris.contains(item.uri.toString()),
+                                onToggle = { toggleParseSource(item.uri) },
+                                onPreview = { viewModel.previewItem = item }
+                            )
+                            Spacer(Modifier.height(10.dp))
+                        }
                     }
 
                     item {
@@ -1037,7 +1093,7 @@ fun MerchantContentScreen() {
                         PrimaryPillButton(
                             text = "确认解析选择",
                             onClick = {
-                                pageState = ContentPageState.PROJECT_DETAIL
+                                viewModel.pageState = ContentPageState.PROJECT_DETAIL
                             },
                         )
                     }
@@ -1048,10 +1104,11 @@ fun MerchantContentScreen() {
 
     if (showCreateProjectDialog) {
         CreateProjectDialog(
-            onDismiss = { showCreateProjectDialog = false },
+            onDismiss = { viewModel.showCreateProjectDialog = false },
             onConfirm = { name ->
-                showCreateProjectDialog = false
-                createProject(name)
+                val finalName = viewModel.createProject(name)
+                Toast.makeText(context, "已创建项目：$finalName", Toast.LENGTH_SHORT).show()
+                viewModel.showCreateProjectDialog = false
             }
         )
     }
@@ -1059,25 +1116,27 @@ fun MerchantContentScreen() {
     if (showRenameProjectDialog && currentProject != null) {
         RenameProjectDialog(
             currentName = currentProject.name,
-            onDismiss = { showRenameProjectDialog = false },
+            onDismiss = { viewModel.showRenameProjectDialog = false },
             onConfirm = { newName ->
-                showRenameProjectDialog = false
-                renameCurrentProject(newName)
+                if (viewModel.renameCurrentProject(newName)) {
+                    Toast.makeText(context, "项目名称已更新", Toast.LENGTH_SHORT).show()
+                }
+                viewModel.showRenameProjectDialog = false
             }
         )
     }
 
     if (showEntrySheet && currentProject != null) {
         UploadEntrySheet(
-            onDismiss = { showEntrySheet = false },
+            onDismiss = { viewModel.showEntrySheet = false },
             onUploadClick = {
-                showEntrySheet = false
+                viewModel.showEntrySheet = false
                 pickMediaLauncher.launch(
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
                 )
             },
             onCaptureClick = {
-                showEntrySheet = false
+                viewModel.showEntrySheet = false
                 launchTakePhoto()
             }
         )
@@ -1085,21 +1144,21 @@ fun MerchantContentScreen() {
 
     if (previewItem != null) {
         MediaPreviewSheet(
-            item = previewItem!!,
-            onDismiss = { previewItem = null }
+            item = previewItem,
+            onDismiss = { viewModel.previewItem = null }
         )
     }
 
     if (showDeleteProjectDialog && currentProject != null) {
         androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showDeleteProjectDialog = false },
+            onDismissRequest = { viewModel.showDeleteProjectDialog = false },
             title = { Text("删除项目") },
             text = { Text("确认删除当前项目吗？删除后将无法恢复。") },
             confirmButton = {
                 androidx.compose.material3.TextButton(
                     onClick = {
-                        showDeleteProjectDialog = false
-                        deleteCurrentProject()
+                        viewModel.showDeleteProjectDialog = false
+                        viewModel.deleteCurrentProject()
                     }
                 ) {
                     Text("确认删除")
@@ -1107,7 +1166,7 @@ fun MerchantContentScreen() {
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(
-                    onClick = { showDeleteProjectDialog = false }
+                    onClick = { viewModel.showDeleteProjectDialog = false }
                 ) {
                     Text("取消")
                 }

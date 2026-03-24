@@ -17,6 +17,8 @@ import com.example.yunjing.data.UserRole
 import com.example.yunjing.nav.Destinations
 import com.example.yunjing.ui.merchant.component.MerchantBottomBar
 import com.example.yunjing.ui.merchant.component.merchantSoftBackground
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.yunjing.ui.merchant.viewmodel.MerchantContentViewModel
 
 // 只保留主壳，不再放 NavHost 和底部栏实现
 
@@ -26,6 +28,7 @@ fun MerchantMainShell(
     onLogout: () -> Unit
 ) {
     val innerNav = rememberNavController()
+    val contentViewModel: MerchantContentViewModel = viewModel()
     val context = LocalContext.current
     val authStore = remember(context) { AuthStore(context) }
 
@@ -51,7 +54,8 @@ fun MerchantMainShell(
                     nav = innerNav,
                     username = username,
                     onSwitchRole = onSwitchRole,
-                    onLogout = onLogout
+                    onLogout = onLogout,
+                    contentViewModel = contentViewModel
                 )
             }
 
