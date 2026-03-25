@@ -1,1177 +1,1271 @@
 package com.example.yunjing.ui.merchant.screen
 
-import android.Manifest
-import android.content.ActivityNotFoundException
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ClearAll
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.ViewInAr
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Collections
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.PlayCircleOutline
+import androidx.compose.material.icons.outlined.ViewInAr
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.yunjing.ui.merchant.component.ContentRow
-import com.example.yunjing.ui.merchant.component.CreateProjectDialog
-import com.example.yunjing.ui.merchant.component.MaterialFolderCard
-import com.example.yunjing.ui.merchant.component.MediaPreviewSheet
-import com.example.yunjing.ui.merchant.component.MiniChip
-import com.example.yunjing.ui.merchant.component.ModelFileRow
-import com.example.yunjing.ui.merchant.component.PendingUploadRow
-import com.example.yunjing.ui.merchant.component.PrimaryPillButton
-import com.example.yunjing.ui.merchant.component.ProgressBlock
-import com.example.yunjing.ui.merchant.component.ProjectListItem
-import com.example.yunjing.ui.merchant.component.RebuildResultCard
-import com.example.yunjing.ui.merchant.component.RenameProjectDialog
-import com.example.yunjing.ui.merchant.component.SelectableUploadRow
-import com.example.yunjing.ui.merchant.component.SoftCard
-import com.example.yunjing.ui.merchant.component.UploadEntrySheet
-import com.example.yunjing.ui.merchant.component.WorkbenchSectionCard
-import com.example.yunjing.ui.merchant.model.ContentItem
-import com.example.yunjing.ui.merchant.model.ContentPageState
-import com.example.yunjing.ui.merchant.model.MerchantContentProject
-import com.example.yunjing.ui.merchant.model.ParseMode
-import com.example.yunjing.ui.merchant.model.ParseResult
-import com.example.yunjing.ui.merchant.model.PendingMediaType
-import com.example.yunjing.ui.merchant.model.PendingUploadItem
-import com.example.yunjing.ui.merchant.model.ProjectModelItem
-import com.example.yunjing.ui.merchant.model.RebuildResult
-import com.example.yunjing.ui.merchant.util.createImageUri
-import kotlinx.coroutines.delay
-import com.example.yunjing.ui.merchant.component.ProjectSettingMenu
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.yunjing.ui.merchant.model.MerchantProjectDto
+import com.example.yunjing.ui.merchant.model.ProjectMediaAssetDto
+import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
 import com.example.yunjing.ui.merchant.viewmodel.MerchantContentViewModel
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.material3.ExperimentalMaterial3Api
 
-private const val UNITY_PLAYER_PACKAGE = "com.example.yunjing.tutorialplayer"
+private enum class MerchantContentPage {
+    PROJECT_LIST,
+    PROJECT_DETAIL,
+    MEDIA_MANAGE,
+    REBUILD_SELECT
+}
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MerchantContentScreen(
     viewModel: MerchantContentViewModel
 ) {
     val context = LocalContext.current
-    val projectDetailListState = rememberLazyListState()
-    val mediaManageListState = rememberLazyListState()
-    val rebuildSelectListState = rememberLazyListState()
-    val parseSelectListState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
 
-    val projects = viewModel.projects
-    val selectedProjectId = viewModel.selectedProjectId
-    val pageState = viewModel.pageState
-    val showCreateProjectDialog = viewModel.showCreateProjectDialog
-    val showRenameProjectDialog = viewModel.showRenameProjectDialog
-    val showDeleteProjectDialog = viewModel.showDeleteProjectDialog
-    val showEntrySheet = viewModel.showEntrySheet
-    val previewItem = viewModel.previewItem
-    val currentCaptureImageUri = viewModel.currentCaptureImageUri
-    val pendingCameraAction = viewModel.pendingCameraAction
+    val isLoading = viewModel.isLoading
+    val isUploading = viewModel.isUploading
+    val isRebuilding = viewModel.isRebuilding
+    val errorMessage = viewModel.errorMessage
+
+    var page by rememberSaveable { mutableStateOf(MerchantContentPage.PROJECT_LIST) }
+    var showCreateDialog by rememberSaveable { mutableStateOf(false) }
+    var showUploadSheet by rememberSaveable { mutableStateOf(false) }
+
+    var createProjectName by rememberSaveable { mutableStateOf("") }
+    var createProjectDesc by rememberSaveable { mutableStateOf("") }
+
+    val selectedRebuildIds = remember { mutableStateListOf<Long>() }
+
     val currentProject = viewModel.currentProject()
-    val recentItems = viewModel.recentItems
+    val currentProjectDetail = viewModel.currentProjectDetail
+    val mediaAssets = viewModel.currentMediaAssets
+    val modelAssets = viewModel.currentModelAssets
 
-    fun normalizeUploads(list: List<PendingUploadItem>): List<PendingUploadItem> {
-        var imageCount = 0
-        var videoCount = 0
-        return list.map { item ->
-            when (item.type) {
-                PendingMediaType.IMAGE -> {
-                    imageCount += 1
-                    item.copy(name = "图片 $imageCount")
-                }
-                PendingMediaType.VIDEO -> {
-                    videoCount += 1
-                    item.copy(name = "视频 $videoCount")
-                }
-            }
-        }
-    }
-
-    fun detectMediaType(uri: Uri): PendingMediaType {
+    fun detectAssetType(uri: Uri): String {
         val mimeType = context.contentResolver.getType(uri).orEmpty()
-        return if (mimeType.startsWith("video")) PendingMediaType.VIDEO else PendingMediaType.IMAGE
+        return if (mimeType.startsWith("video")) "VIDEO" else "IMAGE"
     }
 
-    fun appendUploadsToCurrentProject(uris: List<Uri>, source: String) {
-        val project = currentProject ?: return
-        if (uris.isEmpty()) return
-
-        val imageCountBase = project.uploads.count { it.type == PendingMediaType.IMAGE }
-        val videoCountBase = project.uploads.count { it.type == PendingMediaType.VIDEO }
-
-        var imageIndex = imageCountBase
-        var videoIndex = videoCountBase
-
-        val newItems = uris.map { uri ->
-            val type = detectMediaType(uri)
-            val name = when (type) {
-                PendingMediaType.IMAGE -> {
-                    imageIndex += 1
-                    "图片 $imageIndex"
-                }
-                PendingMediaType.VIDEO -> {
-                    videoIndex += 1
-                    "视频 $videoIndex"
-                }
-            }
-
-            PendingUploadItem(
-                uri = uri,
-                type = type,
-                name = name,
-                source = source
-            )
-        }
-
-        viewModel.updateProject(project.id) {
-            val merged = it.uploads + newItems
-            it.copy(
-                uploads = merged,
-                summary = "已上传 ${merged.size} 项素材"
-            )
+    LaunchedEffect(errorMessage) {
+        if (!errorMessage.isNullOrBlank()) {
+            Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+            viewModel.clearError()
         }
     }
 
-    fun removeUploadFromCurrentProject(item: PendingUploadItem) {
-        val project = currentProject ?: return
-        viewModel.updateProject(project.id) {
-            val remainingUploads = normalizeUploads(it.uploads.filterNot { upload -> upload.uri == item.uri })
-            val validUploadUris = remainingUploads.map { upload -> upload.uri.toString() }.toSet()
-
-            it.copy(
-                uploads = remainingUploads,
-                selectedRebuildUris = it.selectedRebuildUris.filter { uri -> uri in validUploadUris },
-                selectedParseSourceUris = it.selectedParseSourceUris.filter { uri -> uri in validUploadUris },
-                summary = if (remainingUploads.isEmpty()) "待上传内容" else "已上传 ${remainingUploads.size} 项素材"
-            )
-        }
-    }
-
-    fun clearUploadsOfCurrentProject() {
-        val project = currentProject ?: return
-        viewModel.updateProject(project.id) {
-            it.copy(
-                uploads = emptyList(),
-                selectedRebuildUris = emptyList(),
-                selectedParseSourceUris = emptyList(),
-                rebuildResult = null,
-                explodedGuideResult = null,
-                videoGuideResult = null,
-                rebuildProgress = 0f,
-                parseProgress = 0f,
-                summary = "待上传内容"
-            )
-        }
-    }
-
-    fun toggleRebuildMedia(uri: Uri) {
-        val project = currentProject ?: return
-        val key = uri.toString()
-        val current = project.selectedRebuildUris.toMutableList()
-        if (current.contains(key)) current.remove(key) else current.add(key)
-
-        viewModel.updateProject(project.id) {
-            it.copy(selectedRebuildUris = current)
-        }
-    }
-
-    fun toggleParseSource(uri: Uri) {
-        val project = currentProject ?: return
-        val key = uri.toString()
-        val current = project.selectedParseSourceUris.toMutableList()
-        if (current.contains(key)) current.remove(key) else current.add(key)
-
-        viewModel.updateProject(project.id) {
-            it.copy(selectedParseSourceUris = current)
-        }
-    }
-
-    fun toggleParseModel(uri: Uri) {
-        val project = currentProject ?: return
-        val key = uri.toString()
-        val current = project.selectedParseModelUris.toMutableList()
-        if (current.contains(key)) current.remove(key) else current.add(key)
-
-        viewModel.updateProject(project.id) {
-            it.copy(selectedParseModelUris = current)
-        }
-    }
-
-    fun removeParseModel(uri: Uri) {
-        val project = currentProject ?: return
-        val key = uri.toString()
-        viewModel.updateProject(project.id) {
-            it.copy(
-                parseModels = it.parseModels.filterNot { model -> model.uri == uri },
-                selectedParseModelUris = it.selectedParseModelUris.filterNot { selected -> selected == key }
-            )
-        }
-    }
-
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            pendingCameraAction?.invoke()
-            viewModel.pendingCameraAction = null
-        } else {
-            Toast.makeText(context, "未授予相机权限，无法拍摄", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    fun ensureCameraPermission(onGranted: () -> Unit) {
-        val granted = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.CAMERA
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (granted) {
-            onGranted()
-        } else {
-            viewModel.pendingCameraAction = onGranted
-            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-        }
-    }
-
-    val pickMediaLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 20)
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
-        appendUploadsToCurrentProject(uris, "本地选择")
-    }
+        val projectId = currentProject?.id ?: return@rememberLauncherForActivityResult
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
 
-    val takePhotoLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success && currentCaptureImageUri != null) {
-            appendUploadsToCurrentProject(listOf(currentCaptureImageUri!!), "拍摄")
+        uris.forEach { uri ->
+            viewModel.uploadMedia(
+                context = context,
+                projectId = projectId,
+                assetType = "IMAGE",
+                uri = uri
+            )
         }
     }
 
-    val openModelsLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenMultipleDocuments()
+    val videoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
-        val project = currentProject ?: return@rememberLauncherForActivityResult
-        val validModels = uris.filter { uri ->
-            val value = uri.toString().lowercase()
-            value.endsWith(".glb") || value.contains(".glb") || value.contains("model")
-        }
+        val projectId = currentProject?.id ?: return@rememberLauncherForActivityResult
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
 
-        if (validModels.isEmpty() && uris.isNotEmpty()) {
-            Toast.makeText(context, "当前仅建议选择 .glb 模型文件", Toast.LENGTH_SHORT).show()
-        }
-
-        viewModel.updateProject(project.id) {
-            val append = validModels.mapIndexed { index, uri ->
-                val name = "模型 ${it.parseModels.size + index + 1}.glb"
-                ProjectModelItem(uri = uri, name = name)
-            }
-            it.copy(parseModels = it.parseModels + append)
+        uris.forEach { uri ->
+            viewModel.uploadMedia(
+                context = context,
+                projectId = projectId,
+                assetType = "VIDEO",
+                uri = uri
+            )
         }
     }
 
-    fun launchTakePhoto() {
-        ensureCameraPermission {
-            val uri = createImageUri(context)
-            viewModel.currentCaptureImageUri = uri
-            takePhotoLauncher.launch(uri)
-        }
-    }
-
-    fun openUnityPlayer() {
-        try {
-            val launchIntent = context.packageManager.getLaunchIntentForPackage(UNITY_PLAYER_PACKAGE)
-            if (launchIntent != null) {
-                context.startActivity(launchIntent)
-            } else {
-                Toast.makeText(
-                    context,
-                    "Unity 播放器占位包未接入，当前包名：$UNITY_PLAYER_PACKAGE",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        } catch (_: ActivityNotFoundException) {
-            Toast.makeText(context, "未找到教程播放器应用", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    LaunchedEffect(currentProject?.id, currentProject?.isRebuilding) {
-        val project = currentProject ?: return@LaunchedEffect
-        if (project.isRebuilding) {
-            repeat(20) { index ->
-                delay(140)
-                viewModel.updateProject(project.id) {
-                    it.copy(rebuildProgress = (index + 1) / 20f)
-                }
-            }
-            viewModel.updateProject(project.id) {
-                it.copy(
-                    isRebuilding = false,
-                    rebuildProgress = 1f,
-                    rebuildResult = RebuildResult(
-                        modelName = "${it.name} · 重建模型",
-                        statusText = "已完成 fake 3D 重建，可进入预置 .glb 模型浏览流程。"
-                    ),
-                    status = "待解析",
-                    summary = "重建结果已生成"
-                )
-            }
-            Toast.makeText(context, "重建完成", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    LaunchedEffect(currentProject?.id, currentProject?.isParsing) {
-        val project = currentProject ?: return@LaunchedEffect
-        if (project.isParsing) {
-            repeat(24) { index ->
-                delay(120)
-                viewModel.updateProject(project.id) {
-                    it.copy(parseProgress = (index + 1) / 24f)
-                }
-            }
-
-            viewModel.updateProject(project.id) {
-                val result = ParseResult(
-                    mode = it.parseMode,
-                    statusText = if (it.parseMode == ParseMode.EXPLODED_GUIDE) {
-                        "已完成 fake 解析，爆炸图说明书结果已生成，可重复查看。"
-                    } else {
-                        "已完成 fake 解析，教程播放器入口已生成，可重复打开。"
-                    }
-                )
-
-                if (it.parseMode == ParseMode.EXPLODED_GUIDE) {
-                    it.copy(
-                        isParsing = false,
-                        parseProgress = 1f,
-                        explodedGuideResult = result,
-                        status = "待发布",
-                        summary = "解析结果已生成"
+    if (showCreateDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateDialog = false },
+            title = { Text("新建项目") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = createProjectName,
+                        onValueChange = { createProjectName = it },
+                        label = { Text("项目名称") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                } else {
-                    it.copy(
-                        isParsing = false,
-                        parseProgress = 1f,
-                        videoGuideResult = result,
-                        status = "待发布",
-                        summary = "解析结果已生成"
+                    OutlinedTextField(
+                        value = createProjectDesc,
+                        onValueChange = { createProjectDesc = it },
+                        label = { Text("项目说明（选填）") },
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
-            }
-
-            Toast.makeText(context, "解析完成", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    when (pageState) {
-        ContentPageState.PROJECT_LIST -> {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .padding(horizontal = 20.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
-            ) {
-                item {
-                    Spacer(Modifier.height(14.dp))
-                    Text("内容库", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        "以项目为单位管理上传、重建、解析与发布流程",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(Modifier.height(18.dp))
-
-                    SoftCard(modifier = Modifier.fillMaxWidth(), corner = 26.dp) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Text("项目管理", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                            Spacer(Modifier.height(10.dp))
-                            MiniChip(
-                                text = "新建项目",
-                                icon = Icons.Filled.Add,
-                                onClick = { viewModel.showCreateProjectDialog = true },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(14.dp))
-                    Text("项目列表", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(10.dp))
-                }
-
-                items(projects) { project ->
-                    ProjectListItem(
-                        project = project,
-                        onClick = {
-                            viewModel.selectedProjectId = project.id
-                            viewModel.pageState = ContentPageState.PROJECT_DETAIL
-                        }
-                    )
-                    Spacer(Modifier.height(10.dp))
-                }
-
-                item {
-                    if (recentItems.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        Text("最近内容", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(10.dp))
-                        SoftCard(modifier = Modifier.fillMaxWidth()) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                recentItems.forEach { item ->
-                                    ContentRow(
-                                        title = item.title,
-                                        subtitle = item.subtitle,
-                                        badge = item.badge,
-                                        onClick = {}
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        ContentPageState.PROJECT_DETAIL -> {
-            if (currentProject == null) {
-                viewModel.selectedProjectId = null
-                viewModel.pageState = ContentPageState.PROJECT_LIST
-            } else {
-                val canPublish = currentProject.rebuildResult != null ||
-                        currentProject.explodedGuideResult != null ||
-                        currentProject.videoGuideResult != null
-
-                LazyColumn(
-                    state = projectDetailListState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding()
-                        .padding(horizontal = 20.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp)
-                ) {
-                    item {
-                        Spacer(Modifier.height(14.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            MiniChip(
-                                text = "返回项目列表",
-                                icon = Icons.AutoMirrored.Filled.ArrowBack,
-                                onClick = {
-                                    viewModel.selectedProjectId = null
-                                    viewModel.pageState = ContentPageState.PROJECT_LIST
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            ProjectSettingMenu(
-                                modifier = Modifier.weight(1f),
-                                onRename = {
-                                    viewModel.showRenameProjectDialog = true
-                                },
-                                onDelete = {
-                                    viewModel.showDeleteProjectDialog = true
-                                }
-                            )
-                        }
-
-                        Spacer(Modifier.height(14.dp))
-                        Text(currentProject.name, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            "${currentProject.summary} · ${currentProject.status}",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(Modifier.height(18.dp))
-
-                        WorkbenchSectionCard(
-                            title = "素材管理",
-                            desc = "当前项目的图片与视频素材统一存放在素材文件夹中，支持继续添加、预览与删除。",
-                            actionArea = {}
-                        ) {
-                            MaterialFolderCard(
-                                mediaCount = currentProject.uploads.size,
-                                onClick = {
-                                    viewModel.pageState = ContentPageState.MEDIA_FOLDER_MANAGE
-                                }
-                            )
-                        }
-
-                        Spacer(Modifier.height(14.dp))
-
-                        WorkbenchSectionCard(
-                            title = "重建",
-                            desc = "从当前项目素材文件夹中进入选择模式，勾选图片或视频素材后发起重建。",
-                            actionArea = {}
-                        ) {
-                            MiniChip(
-                                text = "进入素材文件夹选择重建图片",
-                                icon = Icons.Filled.ViewInAr,
-                                onClick = {
-                                    if (currentProject.uploads.isEmpty()) {
-                                        Toast.makeText(
-                                            context,
-                                            "当前项目暂无素材，请先进入素材文件夹添加内容",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    } else {
-                                        viewModel.pageState = ContentPageState.MEDIA_FOLDER_SELECT_REBUILD
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            if (currentProject.selectedRebuildUris.isNotEmpty()) {
-                                Spacer(Modifier.height(12.dp))
-                                Text(
-                                    "已选择 ${currentProject.selectedRebuildUris.size} 项重建素材",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-
-                                Spacer(Modifier.height(12.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    MiniChip(
-                                        text = "清空选择",
-                                        icon = Icons.Filled.ClearAll,
-                                        onClick = {
-                                            viewModel.updateProject(currentProject.id) {
-                                                it.copy(
-                                                    selectedRebuildUris = emptyList(),
-                                                    rebuildResult = null,
-                                                    rebuildProgress = 0f
-                                                )
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    MiniChip(
-                                        text = "开始重建",
-                                        icon = Icons.Filled.ViewInAr,
-                                        onClick = {
-                                            val selectedItems = currentProject.uploads.filter { upload ->
-                                                currentProject.selectedRebuildUris.contains(upload.uri.toString())
-                                            }
-
-                                            if (selectedItems.isEmpty()) {
-                                                Toast.makeText(context, "请先选择图片素材后再开始重建", Toast.LENGTH_SHORT).show()
-                                            } else if (selectedItems.any { it.type != PendingMediaType.IMAGE }) {
-                                                Toast.makeText(context, "重建仅支持图片素材，请重新选择", Toast.LENGTH_SHORT).show()
-                                            } else if (!currentProject.isRebuilding) {
-                                                viewModel.updateProject(currentProject.id) {
-                                                    it.copy(
-                                                        isRebuilding = true,
-                                                        rebuildProgress = 0f,
-                                                        rebuildResult = null
-                                                    )
-                                                }
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                            }
-
-                            if (currentProject.isRebuilding) {
-                                Spacer(Modifier.height(12.dp))
-                                ProgressBlock(
-                                    title = "3D 重建中",
-                                    progress = currentProject.rebuildProgress,
-                                    hint = "当前为 fake 进度条，后续可接真实重建后端"
-                                )
-                            }
-
-                            if (currentProject.rebuildResult != null) {
-                                Spacer(Modifier.height(12.dp))
-                                RebuildResultCard(
-                                    modelName = currentProject.rebuildResult.modelName,
-                                    statusText = currentProject.rebuildResult.statusText,
-                                    onBrowseModel = {
-                                        Toast.makeText(
-                                            context,
-                                            "此处进入预置 .glb 模型浏览功能（占位）",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.height(14.dp))
-
-                        WorkbenchSectionCard(
-                            title = "解析",
-                            desc = "解析素材从当前项目素材文件夹中进入选择模式，模型文件继续单独导入。",
-                            actionArea = {
-                                MiniChip(
-                                    text = if (currentProject.parseMode == ParseMode.EXPLODED_GUIDE) {
-                                        "切到视频教程解析"
-                                    } else {
-                                        "切到爆炸图解析"
-                                    },
-                                    icon = Icons.Filled.Description,
-                                    onClick = {
-                                        viewModel.updateProject(currentProject.id) {
-                                            it.copy(
-                                                parseMode = if (it.parseMode == ParseMode.EXPLODED_GUIDE) {
-                                                    ParseMode.VIDEO_GUIDE
-                                                } else {
-                                                    ParseMode.EXPLODED_GUIDE
-                                                },
-                                                selectedParseSourceUris = emptyList(),
-                                                parseProgress = 0f
-                                            )
-                                        }
-                                    }
-                                )
-                            }
-                        ) {
-                            Text(
-                                text = if (currentProject.parseMode == ParseMode.EXPLODED_GUIDE) {
-                                    "当前模式：说明书照片 + 模型 → 爆炸图"
-                                } else {
-                                    "当前模式：视频 + 模型 → 可视化教程"
-                                },
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            Spacer(Modifier.height(12.dp))
-
-                            MiniChip(
-                                text = if (currentProject.parseMode == ParseMode.EXPLODED_GUIDE) {
-                                    "进入素材文件夹选择说明书图片"
-                                } else {
-                                    "进入素材文件夹选择解析视频"
-                                },
-                                icon = Icons.Filled.Description,
-                                onClick = {
-                                    if (currentProject.uploads.isEmpty()) {
-                                        Toast.makeText(
-                                            context,
-                                            "当前项目暂无素材，请先进入素材文件夹添加内容",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    } else {
-                                        viewModel.pageState = ContentPageState.MEDIA_FOLDER_SELECT_PARSE
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            Spacer(Modifier.height(12.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                MiniChip(
-                                    text = "导入模型",
-                                    icon = Icons.Filled.ViewInAr,
-                                    onClick = { openModelsLauncher.launch(arrayOf("*/*")) },
-                                    modifier = Modifier.weight(1f)
-                                )
-                                MiniChip(
-                                    text = "清空解析选择",
-                                    icon = Icons.Filled.ClearAll,
-                                    onClick = {
-                                        viewModel.updateProject(currentProject.id) {
-                                            it.copy(
-                                                selectedParseSourceUris = emptyList(),
-                                                selectedParseModelUris = emptyList(),
-                                                parseProgress = 0f
-                                            )
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-
-                            if (currentProject.selectedParseSourceUris.isNotEmpty()) {
-                                Spacer(Modifier.height(12.dp))
-                                Text(
-                                    "已选择 ${currentProject.selectedParseSourceUris.size} 项解析素材",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            if (currentProject.parseModels.isNotEmpty()) {
-                                Spacer(Modifier.height(12.dp))
-                                Text(
-                                    "已导入模型：",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(Modifier.height(10.dp))
-
-                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    currentProject.parseModels.forEach { model ->
-                                        ModelFileRow(
-                                            item = model,
-                                            selected = currentProject.selectedParseModelUris.contains(model.uri.toString()),
-                                            onToggle = { toggleParseModel(model.uri) },
-                                            onRemove = { removeParseModel(model.uri) }
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(Modifier.height(12.dp))
-
-                            PrimaryPillButton(
-                                text = "开始解析",
-                                onClick = {
-                                    val selectedParseItems = currentProject.uploads.filter { upload ->
-                                        currentProject.selectedParseSourceUris.contains(upload.uri.toString())
-                                    }
-
-                                    if (selectedParseItems.isEmpty()) {
-                                        Toast.makeText(
-                                            context,
-                                            if (currentProject.parseMode == ParseMode.EXPLODED_GUIDE) "请先选择说明书图片" else "请先选择解析视频",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    } else if (
-                                        currentProject.parseMode == ParseMode.EXPLODED_GUIDE &&
-                                        selectedParseItems.any { it.type != PendingMediaType.IMAGE }
-                                    ) {
-                                        Toast.makeText(context, "当前模式仅支持图片素材，请重新选择", Toast.LENGTH_SHORT).show()
-                                    } else if (
-                                        currentProject.parseMode == ParseMode.VIDEO_GUIDE &&
-                                        selectedParseItems.any { it.type != PendingMediaType.VIDEO }
-                                    ) {
-                                        Toast.makeText(context, "当前模式仅支持视频素材，请重新选择", Toast.LENGTH_SHORT).show()
-                                    } else if (currentProject.selectedParseModelUris.isEmpty()) {
-                                        Toast.makeText(context, "请至少选择一个模型文件", Toast.LENGTH_SHORT).show()
-                                    } else if (!currentProject.isParsing) {
-                                        viewModel.updateProject(currentProject.id) {
-                                            it.copy(
-                                                isParsing = true,
-                                                parseProgress = 0f,
-                                            )
-                                        }
-                                    }
-                                },
-                            )
-
-                            if (currentProject.isParsing) {
-                                Spacer(Modifier.height(12.dp))
-                                ProgressBlock(
-                                    title = "内容解析中",
-                                    progress = currentProject.parseProgress,
-                                    hint = "当前为 fake 解析进度，后续可接真实生成服务"
-                                )
-                            }
-
-                            if (currentProject.explodedGuideResult != null) {
-                                Spacer(Modifier.height(12.dp))
-                                SoftCard(modifier = Modifier.fillMaxWidth()) {
-                                    Column(modifier = Modifier.fillMaxWidth()) {
-                                        Text("爆炸图结果", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                        Spacer(Modifier.height(8.dp))
-                                        Text(
-                                            currentProject.explodedGuideResult.statusText,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Spacer(Modifier.height(12.dp))
-                                        PrimaryPillButton(
-                                            text = "查看爆炸图",
-                                            onClick = {
-                                                Toast.makeText(context, "此处打开已生成的爆炸图说明书（占位）", Toast.LENGTH_SHORT).show()
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-
-                            if (currentProject.videoGuideResult != null) {
-                                Spacer(Modifier.height(12.dp))
-                                SoftCard(modifier = Modifier.fillMaxWidth()) {
-                                    Column(modifier = Modifier.fillMaxWidth()) {
-                                        Text("教程播放器", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                        Spacer(Modifier.height(8.dp))
-                                        Text(
-                                            currentProject.videoGuideResult.statusText,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Spacer(Modifier.height(12.dp))
-                                        PrimaryPillButton(
-                                            text = "打开教程播放器",
-                                            onClick = { openUnityPlayer() }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.height(14.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            PrimaryPillButton(
-                                text = if (canPublish) "发布当前项目" else "发布当前项目（需先生成结果）",
-                                onClick = {
-                                    if (!canPublish) {
-                                        Toast.makeText(context, "请先完成重建或解析中的至少一项成果", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        viewModel.updateProject(currentProject.id) {
-                                            it.copy(
-                                                status = "已发布",
-                                                summary = "版本 v1.0"
-                                            )
-                                        }
-                                        Toast.makeText(context, "发布成功（当前为本地占位逻辑）", Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        ContentPageState.MEDIA_FOLDER_MANAGE -> {
-            if (currentProject == null) {
-                viewModel.selectedProjectId = null
-                viewModel.pageState = ContentPageState.PROJECT_LIST
-            } else {
-                LazyColumn(
-                    state = mediaManageListState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding()
-                        .padding(horizontal = 20.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp)
-                ) {
-                    item {
-                        Spacer(Modifier.height(14.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            MiniChip(
-                                text = "返回项目",
-                                icon = Icons.AutoMirrored.Filled.ArrowBack,
-                                onClick = { viewModel.pageState = ContentPageState.PROJECT_DETAIL },
-                                modifier = Modifier.weight(1f)
-                            )
-                            MiniChip(
-                                text = "添加素材",
-                                icon = Icons.Filled.Add,
-                                onClick = { viewModel.showEntrySheet = true },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Spacer(Modifier.height(14.dp))
-                        Text("素材文件夹", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            "统一管理当前项目内的图片与视频素材",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(Modifier.height(18.dp))
-
-                        if (currentProject.uploads.isNotEmpty()) {
-                            PrimaryPillButton(
-                                text = "清空当前素材",
-                                onClick = {
-                                    clearUploadsOfCurrentProject()
-                                    Toast.makeText(context, "当前项目素材已清空", Toast.LENGTH_SHORT).show()
-                                },
-                            )
-                            Spacer(Modifier.height(12.dp))
-                        }
-                    }
-
-                    if (currentProject.uploads.isEmpty()) {
-                        item {
-                            Text(
-                                "当前项目暂无素材，请点击“添加素材”继续上传。",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    } else {
-                        items(currentProject.uploads) { item ->
-                            PendingUploadRow(
-                                item = item,
-                                onPreview = { viewModel.previewItem = item },
-                                onRemove = { removeUploadFromCurrentProject(item) }
-                            )
-                            Spacer(Modifier.height(10.dp))
-                        }
-                    }
-                }
-            }
-        }
-
-        ContentPageState.MEDIA_FOLDER_SELECT_REBUILD -> {
-            if (currentProject == null) {
-                viewModel.selectedProjectId = null
-                viewModel.pageState = ContentPageState.PROJECT_LIST
-            } else {
-                val rebuildCandidates = currentProject.uploads.filter { it.type == PendingMediaType.IMAGE }
-                LazyColumn(
-                    state = rebuildSelectListState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding()
-                        .padding(horizontal = 20.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp)
-                ) {
-                    item {
-                        Spacer(Modifier.height(14.dp))
-
-                        MiniChip(
-                            text = "返回项目",
-                            icon = Icons.AutoMirrored.Filled.ArrowBack,
-                            onClick = { viewModel.pageState = ContentPageState.PROJECT_DETAIL },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(Modifier.height(14.dp))
-                        Text("选择重建素材", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            "请在素材文件夹中勾选参与重建的素材",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(18.dp))
-                    }
-
-                    if (rebuildCandidates.isEmpty()) {
-                        item {
-                            Text(
-                                "当前项目没有可用于重建的图片素材，请先在素材文件夹中上传图片。",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.height(12.dp))
-                        }
-                    } else {
-                        items(rebuildCandidates) { item ->
-                            SelectableUploadRow(
-                                item = item,
-                                selected = currentProject.selectedRebuildUris.contains(item.uri.toString()),
-                                onToggle = { toggleRebuildMedia(item.uri) },
-                                onPreview = { viewModel.previewItem = item }
-                            )
-                            Spacer(Modifier.height(10.dp))
-                        }
-                    }
-
-                    item {
-                        Spacer(Modifier.height(8.dp))
-                        PrimaryPillButton(
-                            text = "确认重建选择",
-                            onClick = {
-                                viewModel.pageState = ContentPageState.PROJECT_DETAIL
-                            },
-                        )
-                    }
-                }
-            }
-        }
-
-        ContentPageState.MEDIA_FOLDER_SELECT_PARSE -> {
-            if (currentProject == null) {
-                viewModel.selectedProjectId = null
-                viewModel.pageState = ContentPageState.PROJECT_LIST
-            } else {
-                val parseCandidates = if (currentProject.parseMode == ParseMode.EXPLODED_GUIDE) {
-                    currentProject.uploads.filter { it.type == PendingMediaType.IMAGE }
-                } else {
-                    currentProject.uploads.filter { it.type == PendingMediaType.VIDEO }
-                }
-                LazyColumn(
-                    state = parseSelectListState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding()
-                        .padding(horizontal = 20.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp)
-                ) {
-                    item {
-                        Spacer(Modifier.height(14.dp))
-
-                        MiniChip(
-                            text = "返回项目",
-                            icon = Icons.AutoMirrored.Filled.ArrowBack,
-                            onClick = { viewModel.pageState = ContentPageState.PROJECT_DETAIL },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(Modifier.height(14.dp))
-                        Text("选择解析素材", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            "请在素材文件夹中勾选参与解析的素材",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(18.dp))
-                    }
-
-                    if (parseCandidates.isEmpty()) {
-                        item {
-                            Text(
-                                text = if (currentProject.parseMode == ParseMode.EXPLODED_GUIDE) {
-                                    "当前项目没有可用于解析的说明书图片，请先在素材文件夹中上传图片。"
-                                } else {
-                                    "当前项目没有可用于解析的视频素材，请先在素材文件夹中上传视频。"
-                                },
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.height(12.dp))
-                        }
-                    } else {
-                        items(parseCandidates) { item ->
-                            SelectableUploadRow(
-                                item = item,
-                                selected = currentProject.selectedParseSourceUris.contains(item.uri.toString()),
-                                onToggle = { toggleParseSource(item.uri) },
-                                onPreview = { viewModel.previewItem = item }
-                            )
-                            Spacer(Modifier.height(10.dp))
-                        }
-                    }
-
-                    item {
-                        Spacer(Modifier.height(8.dp))
-                        PrimaryPillButton(
-                            text = "确认解析选择",
-                            onClick = {
-                                viewModel.pageState = ContentPageState.PROJECT_DETAIL
-                            },
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    if (showCreateProjectDialog) {
-        CreateProjectDialog(
-            onDismiss = { viewModel.showCreateProjectDialog = false },
-            onConfirm = { name ->
-                val finalName = viewModel.createProject(name)
-                Toast.makeText(context, "已创建项目：$finalName", Toast.LENGTH_SHORT).show()
-                viewModel.showCreateProjectDialog = false
-            }
-        )
-    }
-
-    if (showRenameProjectDialog && currentProject != null) {
-        RenameProjectDialog(
-            currentName = currentProject.name,
-            onDismiss = { viewModel.showRenameProjectDialog = false },
-            onConfirm = { newName ->
-                if (viewModel.renameCurrentProject(newName)) {
-                    Toast.makeText(context, "项目名称已更新", Toast.LENGTH_SHORT).show()
-                }
-                viewModel.showRenameProjectDialog = false
-            }
-        )
-    }
-
-    if (showEntrySheet && currentProject != null) {
-        UploadEntrySheet(
-            onDismiss = { viewModel.showEntrySheet = false },
-            onUploadClick = {
-                viewModel.showEntrySheet = false
-                pickMediaLauncher.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                )
             },
-            onCaptureClick = {
-                viewModel.showEntrySheet = false
-                launchTakePhoto()
-            }
-        )
-    }
-
-    if (previewItem != null) {
-        MediaPreviewSheet(
-            item = previewItem,
-            onDismiss = { viewModel.previewItem = null }
-        )
-    }
-
-    if (showDeleteProjectDialog && currentProject != null) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { viewModel.showDeleteProjectDialog = false },
-            title = { Text("删除项目") },
-            text = { Text("确认删除当前项目吗？删除后将无法恢复。") },
             confirmButton = {
-                androidx.compose.material3.TextButton(
+                Button(
                     onClick = {
-                        viewModel.showDeleteProjectDialog = false
-                        viewModel.deleteCurrentProject()
+                        viewModel.createProject(
+                            name = createProjectName,
+                            desc = createProjectDesc.ifBlank { null },
+                            onSuccess = {
+                                createProjectName = ""
+                                createProjectDesc = ""
+                                showCreateDialog = false
+                                page = MerchantContentPage.PROJECT_DETAIL
+                            }
+                        )
                     }
                 ) {
-                    Text("确认删除")
+                    Text("创建")
                 }
             },
             dismissButton = {
-                androidx.compose.material3.TextButton(
-                    onClick = { viewModel.showDeleteProjectDialog = false }
-                ) {
+                TextButton(onClick = { showCreateDialog = false }) {
                     Text("取消")
                 }
             }
         )
     }
+
+    if (showUploadSheet && currentProject != null) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+        ModalBottomSheet(
+            onDismissRequest = { showUploadSheet = false },
+            sheetState = sheetState,
+            windowInsets = WindowInsets.navigationBars
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = "选择上传方式",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Text(
+                    text = "为当前项目上传素材。图片与视频分开选择，更符合后续重建与解析流程。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                FilledTonalButton(
+                    onClick = {
+                        scope.launch { sheetState.hide() }.invokeOnCompletion {
+                            showUploadSheet = false
+                            imagePickerLauncher.launch("image/*")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Outlined.Collections, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("上传图片")
+                }
+
+                FilledTonalButton(
+                    onClick = {
+                        scope.launch { sheetState.hide() }.invokeOnCompletion {
+                            showUploadSheet = false
+                            videoPickerLauncher.launch("video/*")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Outlined.PlayCircleOutline, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("上传视频")
+                }
+
+                Spacer(
+                    modifier = Modifier.height(
+                        WindowInsets.ime
+                            .getBottom(androidx.compose.ui.platform.LocalDensity.current)
+                            .dp
+                    )
+                )
+            }
+        }
+    }
+
+    Scaffold(
+        containerColor = Color.Transparent
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp)
+        ) {
+            when (page) {
+                MerchantContentPage.PROJECT_LIST -> {
+                    ProjectListPage(
+                        projects = viewModel.projects,
+                        isLoading = isLoading,
+                        onCreateProject = { showCreateDialog = true },
+                        onOpenProject = { project ->
+                            viewModel.selectProject(project.id)
+                            selectedRebuildIds.clear()
+                            page = MerchantContentPage.PROJECT_DETAIL
+                        }
+                    )
+                }
+
+                MerchantContentPage.PROJECT_DETAIL -> {
+                    if (currentProject == null) {
+                        EmptyStateCard(
+                            title = "暂无已选项目",
+                            desc = "请先从项目列表中选择一个项目。"
+                        ) {
+                            page = MerchantContentPage.PROJECT_LIST
+                        }
+                    } else {
+                        ProjectWorkbenchPage(
+                            project = currentProject,
+                            projectDesc = currentProject.projectDesc,
+                            mediaCount = mediaAssets.size,
+                            modelCount = modelAssets.size,
+                            isUploading = isUploading,
+                            isRebuilding = isRebuilding,
+                            selectedRebuildCount = selectedRebuildIds.size,
+                            onBack = {
+                                selectedRebuildIds.clear()
+                                page = MerchantContentPage.PROJECT_LIST
+                            },
+                            onOpenMediaFolder = {
+                                page = MerchantContentPage.MEDIA_MANAGE
+                            },
+                            onOpenRebuildSelector = {
+                                page = MerchantContentPage.REBUILD_SELECT
+                            },
+                            onUpload = {
+                                showUploadSheet = true
+                            },
+                            onStartRebuild = {
+                                if (selectedRebuildIds.isEmpty()) {
+                                    Toast.makeText(context, "请先选择待重建的图片素材", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    viewModel.rebuildProject(
+                                        projectId = currentProject.id,
+                                        sourceAssetIds = selectedRebuildIds.toList(),
+                                        onSuccess = {
+                                            Toast.makeText(context, "重建任务已提交", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+                                }
+                            },
+                            modelAssets = modelAssets,
+                            detailText = currentProjectDetail?.project?.projectDesc
+                        )
+                    }
+                }
+
+                MerchantContentPage.MEDIA_MANAGE -> {
+                    if (currentProject == null) {
+                        EmptyStateCard(
+                            title = "项目信息丢失",
+                            desc = "请返回项目列表重新进入。"
+                        ) {
+                            page = MerchantContentPage.PROJECT_LIST
+                        }
+                    } else {
+                        MediaManagePage(
+                            projectName = currentProject.projectName,
+                            mediaAssets = mediaAssets,
+                            isUploading = isUploading,
+                            onBack = { page = MerchantContentPage.PROJECT_DETAIL },
+                            onAddMedia = { showUploadSheet = true }
+                        )
+                    }
+                }
+
+                MerchantContentPage.REBUILD_SELECT -> {
+                    if (currentProject == null) {
+                        EmptyStateCard(
+                            title = "项目信息丢失",
+                            desc = "请返回项目列表重新进入。"
+                        ) {
+                            page = MerchantContentPage.PROJECT_LIST
+                        }
+                    } else {
+                        RebuildSelectPage(
+                            projectName = currentProject.projectName,
+                            mediaAssets = mediaAssets,
+                            selectedIds = selectedRebuildIds,
+                            isRebuilding = isRebuilding,
+                            onBack = { page = MerchantContentPage.PROJECT_DETAIL },
+                            onToggle = { assetId ->
+                                if (selectedRebuildIds.contains(assetId)) {
+                                    selectedRebuildIds.remove(assetId)
+                                } else {
+                                    selectedRebuildIds.add(assetId)
+                                }
+                            },
+                            onConfirm = {
+                                if (selectedRebuildIds.isEmpty()) {
+                                    Toast.makeText(context, "请至少选择一张图片", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    viewModel.rebuildProject(
+                                        projectId = currentProject.id,
+                                        sourceAssetIds = selectedRebuildIds.toList(),
+                                        onSuccess = {
+                                            Toast.makeText(context, "重建完成", Toast.LENGTH_SHORT).show()
+                                            page = MerchantContentPage.PROJECT_DETAIL
+                                        }
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
+            if (isLoading && viewModel.projects.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Transparent),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+        }
+    }
 }
 
+@Composable
+private fun ProjectListPage(
+    projects: List<MerchantProjectDto>,
+    isLoading: Boolean,
+    onCreateProject: () -> Unit,
+    onOpenProject: (MerchantProjectDto) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item {
+            HeroHeaderCard(
+                title = "内容库",
+                subtitle = "以项目为单位组织上传、重建、解析与发布流程，恢复旧版工作台式管理体验。"
+            )
+        }
+
+        item {
+            SoftPanelCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "项目管理",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "先创建项目，再进入项目内执行素材上传、重建与解析。",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Button(onClick = onCreateProject) {
+                        Icon(Icons.Outlined.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("新建项目")
+                    }
+                }
+            }
+        }
+
+        if (projects.isEmpty()) {
+            item {
+                EmptyStateCard(
+                    title = if (isLoading) "项目加载中" else "暂无项目",
+                    desc = if (isLoading) "正在从后端同步项目数据。" else "点击右上方“新建项目”开始创建内容生产流程。"
+                )
+            }
+        } else {
+            items(projects, key = { it.id }) { project ->
+                ProjectListItemCard(
+                    project = project,
+                    onClick = { onOpenProject(project) }
+                )
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(20.dp)) }
+    }
+}
+
+@Composable
+private fun ProjectWorkbenchPage(
+    project: MerchantProjectDto,
+    projectDesc: String?,
+    detailText: String?,
+    mediaCount: Int,
+    modelCount: Int,
+    isUploading: Boolean,
+    isRebuilding: Boolean,
+    selectedRebuildCount: Int,
+    onBack: () -> Unit,
+    onOpenMediaFolder: () -> Unit,
+    onOpenRebuildSelector: () -> Unit,
+    onUpload: () -> Unit,
+    onStartRebuild: () -> Unit,
+    modelAssets: List<ProjectModelAssetDto>
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onBack) {
+                    Icon(Icons.Outlined.ArrowBack, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("返回项目列表")
+                }
+            }
+        }
+
+        item {
+            HeroHeaderCard(
+                title = project.projectName,
+                subtitle = projectDesc ?: detailText ?: "该项目已进入内容工作台，可继续进行素材管理、模型重建与解析发布。"
+            )
+        }
+
+        item {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatChip(label = "素材", value = mediaCount.toString())
+                StatChip(label = "模型", value = modelCount.toString())
+                StatChip(label = "已选重建", value = selectedRebuildCount.toString())
+            }
+        }
+
+        item {
+            WorkbenchSectionCard(
+                title = "素材管理",
+                desc = "按旧版流程保留“素材文件夹”入口，项目内素材统一管理。"
+            ) {
+                FolderEntryCard(
+                    icon = Icons.Outlined.FolderOpen,
+                    title = "素材文件夹",
+                    desc = "进入后可查看当前项目已上传的图片与视频素材。",
+                    actionText = if (isUploading) "上传中..." else "进入文件夹",
+                    onClick = onOpenMediaFolder
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = onUpload,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Outlined.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("添加素材")
+                }
+            }
+        }
+
+        item {
+            WorkbenchSectionCard(
+                title = "重建",
+                desc = "仅支持从已上传图片中勾选素材进行重建，保留旧版工作台操作路径。"
+            ) {
+                FolderEntryCard(
+                    icon = Icons.Outlined.AutoAwesome,
+                    title = "选择重建素材",
+                    desc = "进入选择页后仅展示图片素材，可勾选后发起模型重建。",
+                    actionText = "去选择",
+                    onClick = onOpenRebuildSelector
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                FilledTonalButton(
+                    onClick = onStartRebuild,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isRebuilding
+                ) {
+                    Icon(Icons.Outlined.ViewInAr, contentDescription = null)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(if (isRebuilding) "重建中..." else "开始重建")
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = "模型输出",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (modelAssets.isEmpty()) {
+                    InlineHintCard("当前暂无模型输出。完成重建后，模型文件会在这里展示。")
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        modelAssets.forEach { model ->
+                            ModelResultCard(model = model)
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            WorkbenchSectionCard(
+                title = "解析",
+                desc = "保留旧版解析工作台外观；当前页面先展示入口和说明，后续可再接入解析后端接口。"
+            ) {
+                ParsePlaceholderCard(
+                    title = "说明书解析",
+                    desc = "用于生成分步拆解说明、结构信息与图文指引。",
+                    icon = Icons.Outlined.Description
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                ParsePlaceholderCard(
+                    title = "视频教程解析",
+                    desc = "用于抽取讲解片段、操作步骤与关键动作信息。",
+                    icon = Icons.Outlined.PlayCircleOutline
+                )
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(20.dp)) }
+    }
+}
+
+@Composable
+private fun MediaManagePage(
+    projectName: String,
+    mediaAssets: List<ProjectMediaAssetDto>,
+    isUploading: Boolean,
+    onBack: () -> Unit,
+    onAddMedia: () -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onBack) {
+                    Icon(Icons.Outlined.ArrowBack, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("返回工作台")
+                }
+            }
+        }
+
+        item {
+            HeroHeaderCard(
+                title = "素材文件夹",
+                subtitle = "项目：$projectName"
+            )
+        }
+
+        item {
+            SoftPanelCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "素材管理",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "图片与视频统一归档，供后续重建和解析流程选择。",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    OutlinedButton(onClick = onAddMedia) {
+                        Text(if (isUploading) "上传中..." else "添加素材")
+                    }
+                }
+            }
+        }
+
+        if (mediaAssets.isEmpty()) {
+            item {
+                EmptyStateCard(
+                    title = "暂无素材",
+                    desc = "当前项目还没有上传任何图片或视频。"
+                )
+            }
+        } else {
+            items(mediaAssets, key = { it.id }) { asset ->
+                MediaAssetCard(asset = asset)
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(20.dp)) }
+    }
+}
+
+@Composable
+private fun RebuildSelectPage(
+    projectName: String,
+    mediaAssets: List<ProjectMediaAssetDto>,
+    selectedIds: List<Long>,
+    isRebuilding: Boolean,
+    onBack: () -> Unit,
+    onToggle: (Long) -> Unit,
+    onConfirm: () -> Unit
+) {
+    val imageAssets = mediaAssets.filter { it.assetType.equals("IMAGE", ignoreCase = true) }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onBack) {
+                    Icon(Icons.Outlined.ArrowBack, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("返回工作台")
+                }
+            }
+        }
+
+        item {
+            HeroHeaderCard(
+                title = "重建素材选择",
+                subtitle = "项目：$projectName，仅展示图片素材。"
+            )
+        }
+
+        item {
+            SoftPanelCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "已选择 ${selectedIds.size} 项",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "建议选择同一对象、同一场景下的多角度图片，提高重建质量。",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Button(
+                        onClick = onConfirm,
+                        enabled = !isRebuilding
+                    ) {
+                        Text(if (isRebuilding) "重建中..." else "确认重建")
+                    }
+                }
+            }
+        }
+
+        if (imageAssets.isEmpty()) {
+            item {
+                EmptyStateCard(
+                    title = "暂无可重建图片",
+                    desc = "请先在素材文件夹中上传图片素材，视频素材不可直接用于当前重建流程。"
+                )
+            }
+        } else {
+            items(imageAssets, key = { it.id }) { asset ->
+                RebuildSelectableAssetCard(
+                    asset = asset,
+                    checked = selectedIds.contains(asset.id),
+                    onToggle = { onToggle(asset.id) }
+                )
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(20.dp)) }
+    }
+}
+
+@Composable
+private fun HeroHeaderCard(
+    title: String,
+    subtitle: String
+) {
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+                .padding(20.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun SoftPanelCard(
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        tonalElevation = 1.dp,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            content = content
+        )
+    }
+}
+
+@Composable
+private fun WorkbenchSectionCard(
+    title: String,
+    desc: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp,
+        shadowElevation = 1.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = desc,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            content()
+        }
+    }
+}
+
+@Composable
+private fun ProjectListItemCard(
+    project: MerchantProjectDto,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = LocalIndication.current,
+                onClick = onClick
+            ),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Inventory2,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = project.projectName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = project.projectDesc ?: "暂无项目说明",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            AssistChip(
+                onClick = onClick,
+                label = { Text("进入") },
+                colors = AssistChipDefaults.assistChipColors()
+            )
+        }
+    }
+}
+
+@Composable
+private fun FolderEntryCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    desc: String,
+    actionText: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = LocalIndication.current,
+                onClick = onClick
+            ),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.14f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = desc,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Text(
+                text = actionText,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun ParsePlaceholderCard(
+    title: String,
+    desc: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = desc,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            InlineHintCard("当前仅恢复工作台外观，解析后端接口接入后可继续扩展。")
+        }
+    }
+}
+
+@Composable
+private fun MediaAssetCard(
+    asset: ProjectMediaAssetDto
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (asset.assetType.equals("VIDEO", true)) {
+                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f)
+                            } else {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (asset.assetType.equals("VIDEO", true)) {
+                            Icons.Outlined.PlayCircleOutline
+                        } else {
+                            Icons.Outlined.Collections
+                        },
+                        contentDescription = null
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = asset.fileName ?: "未命名素材",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (asset.assetType.equals("VIDEO", true)) "视频素材" else "图片素材",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RebuildSelectableAssetCard(
+    asset: ProjectMediaAssetDto,
+    checked: Boolean,
+    onToggle: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(
+                value = checked,
+                onValueChange = { onToggle() }
+            ),
+        shape = RoundedCornerShape(20.dp),
+        color = if (checked) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        border = BorderStroke(
+            1.dp,
+            if (checked) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = null
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = asset.fileName ?: "未命名图片",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "图片素材 · 可用于重建",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModelResultCard(
+    model: ProjectModelAssetDto
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = model.modelName ?: "模型文件",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "模型已生成，可在后续接入模型预览器或解析流程后继续使用。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatChip(
+    label: String,
+    value: String
+) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun InlineHintCard(
+    text: String
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f)
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(12.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun EmptyStateCard(
+    title: String,
+    desc: String,
+    action: (() -> Unit)? = null
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = desc,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (action != null) {
+                Spacer(modifier = Modifier.height(14.dp))
+                OutlinedButton(onClick = action) {
+                    Text("返回")
+                }
+            }
+        }
+    }
+}
