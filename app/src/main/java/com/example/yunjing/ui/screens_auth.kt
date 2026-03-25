@@ -30,7 +30,9 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
+import com.example.yunjing.data.AuthRepository
 import com.example.yunjing.data.LegalText
+import com.example.yunjing.data.RoleStore
 
 enum class LegalDoc { TERMS, PRIVACY }
 
@@ -50,6 +52,11 @@ fun AuthScreen(
 
     val ctx = LocalContext.current
     val authStore = remember { AuthStore(ctx) }
+
+    val roleStore = remember { RoleStore(ctx) }
+    val authRepository = remember { AuthRepository() }
+    var loading by remember { mutableStateOf(false) }
+
     val scope = rememberCoroutineScope()
 
     // role string -> UserRole
@@ -199,13 +206,35 @@ fun AuthScreen(
                         }
 
                         GradientButton(
-                            text = "登 录",
+                            text = if (loading) "登录中..." else "登 录",
                             enabled = loginAgree && loginAccount.isNotBlank() && loginPassword.isNotBlank(),
                             onClick = {
                                 errorMsg = null
                                 scope.launch {
-                                    val ok = authStore.login(userRole, loginAccount.trim(), loginPassword)
-                                    if (ok) onAuthSuccess() else errorMsg = "账号或密码错误"
+                                    loading = true
+                                    try {
+                                        val resp = authRepository.login(
+                                            username = loginAccount.trim(),
+                                            password = loginPassword
+                                        )
+
+                                        if (resp.success) {
+                                            val backendRole = when (resp.role?.uppercase()) {
+                                                "MERCHANT" -> UserRole.MERCHANT
+                                                else -> UserRole.BUYER
+                                            }
+
+                                            roleStore.setRole(backendRole)
+                                            authStore.saveLogin(backendRole, resp.username ?: loginAccount.trim())
+                                            onAuthSuccess()
+                                        } else {
+                                            errorMsg = resp.message.ifBlank { "账号或密码错误" }
+                                        }
+                                    } catch (e: Exception) {
+                                        errorMsg = "网络异常：${e.message ?: "请检查后端服务"}"
+                                    } finally {
+                                        loading = false
+                                    }
                                 }
                             }
                         )
@@ -300,7 +329,7 @@ fun AuthScreen(
                         }
 
                         GradientButton(
-                            text = "注 册",
+                            text = if (loading) "注册中..." else "注 册",
                             enabled = regAgree && regAccount.isNotBlank() && pwdOk && pwdMatch,
                             onClick = {
                                 errorMsg = null
@@ -310,14 +339,27 @@ fun AuthScreen(
                                         regPwd != regPwd2 -> { errorMsg = "两次密码不一致"; return@launch }
                                         else -> {
                                             val acc = regAccount.trim()
-                                            authStore.register(userRole, acc, regPwd)
-                                            // 预填登录账号（更顺手）
-                                            loginAccount = acc
-                                            // 可选：清空登录密码，要求重新输入
-                                            loginPassword = ""
-                                            // 可选：把勾选同步过去（不想同步就删掉这行）
-                                            loginAgree = regAgree
-                                            showRegisterSuccessDialog = true
+                                            loading = true
+                                            try {
+                                                val resp = authRepository.register(
+                                                    username = acc,
+                                                    password = regPwd,
+                                                    role = userRole
+                                                )
+
+                                                if (resp.success) {
+                                                    loginAccount = acc
+                                                    loginPassword = ""
+                                                    loginAgree = regAgree
+                                                    showRegisterSuccessDialog = true
+                                                } else {
+                                                    errorMsg = resp.message
+                                                }
+                                            } catch (e: Exception) {
+                                                errorMsg = "网络异常：${e.message ?: "请检查后端服务"}"
+                                            } finally {
+                                                loading = false
+                                            }
                                         }
                                     }
                                 }
