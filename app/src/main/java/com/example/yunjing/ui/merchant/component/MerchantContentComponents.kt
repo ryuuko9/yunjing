@@ -389,8 +389,10 @@ fun ParseResultCard(
 @Composable
 fun UploadEntrySheet(
     onDismiss: () -> Unit,
-    onUploadClick: () -> Unit,
-    onCaptureClick: () -> Unit
+    onUploadImageClick: () -> Unit,
+    onUploadVideoClick: () -> Unit,
+    onCaptureImageClick: () -> Unit,
+    onCaptureVideoClick: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -402,17 +404,31 @@ fun UploadEntrySheet(
             Text("选择操作", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
 
             SheetActionItem(
-                icon = Icons.Filled.UploadFile,
-                title = "上传",
-                subtitle = "从本地选择照片或视频",
-                onClick = onUploadClick
+                icon = Icons.Filled.Image,
+                title = "上传图片",
+                subtitle = "从本地相册选择图片素材",
+                onClick = onUploadImageClick
+            )
+
+            SheetActionItem(
+                icon = Icons.Filled.Videocam,
+                title = "上传视频",
+                subtitle = "从本地相册选择视频素材",
+                onClick = onUploadVideoClick
             )
 
             SheetActionItem(
                 icon = Icons.Filled.PhotoCamera,
-                title = "拍摄",
-                subtitle = "使用相机拍摄照片或视频",
-                onClick = onCaptureClick
+                title = "拍照上传",
+                subtitle = "使用相机拍摄图片素材",
+                onClick = onCaptureImageClick
+            )
+
+            SheetActionItem(
+                icon = Icons.Filled.PlayCircleOutline,
+                title = "拍摄视频上传",
+                subtitle = "使用相机录制视频素材",
+                onClick = onCaptureVideoClick
             )
 
             Spacer(Modifier.height(8.dp))
@@ -641,4 +657,27 @@ fun ProjectSettingMenu(
             )
         }
     }
+}
+
+@Composable
+fun DeleteMediaDialog(
+    fileName: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("删除素材") },
+        text = { Text("确认删除素材“$fileName”吗？删除后不可恢复。") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("删除")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }

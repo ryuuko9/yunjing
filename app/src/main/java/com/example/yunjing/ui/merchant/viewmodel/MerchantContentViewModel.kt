@@ -18,6 +18,14 @@ import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
 import com.example.yunjing.ui.merchant.repository.MerchantContentRepository
 import kotlinx.coroutines.launch
 
+enum class LibraryStage {
+    PENDING_UPLOAD,
+    PENDING_REBUILD,
+    PENDING_PARSE,
+    READY,
+    PUBLISHED
+}
+
 class MerchantContentViewModel(
     private val repository: MerchantContentRepository
 ) : ViewModel() {
@@ -30,8 +38,7 @@ class MerchantContentViewModel(
         val publishStatus: String = "待处理",
         val selectedRebuildAssetIds: List<Long> = emptyList(),
         val selectedParseSourceAssetIds: List<Long> = emptyList(),
-        val selectedParseModelUris: List<String> = emptyList(),
-        val localParseModels: List<Uri> = emptyList(),
+        val selectedParseModelIds: List<Long> = emptyList(),
         val parseMode: ParseMode = ParseMode.EXPLODED_GUIDE,
         val isFakeRebuilding: Boolean = false,
         val rebuildProgress: Float = 0f,
@@ -39,12 +46,70 @@ class MerchantContentViewModel(
         val isFakeParsing: Boolean = false,
         val parseProgress: Float = 0f,
         val fakeExplodedGuideResult: String? = null,
+        val fakeExplodedImageUrl: String? = null,
         val fakeVideoGuideResult: String? = null,
     )
 
     val projects = mutableStateListOf<MerchantProjectDto>()
     val currentMediaAssets = mutableStateListOf<ProjectMediaAssetDto>()
     val currentModelAssets = mutableStateListOf<ProjectModelAssetDto>()
+
+    private val localPreviewUriMap = mutableStateMapOf<Long, Uri>()
+
+    private val pendingLocalPreviewQueue = mutableStateMapOf<Long, MutableList<Pair<String, Uri>>>()
+
+    private fun enqueuePendingLocalPreview(projectId: Long, assetType: String, uri: Uri) {
+        val queue = pendingLocalPreviewQueue.getOrPut(projectId) { mutableListOf() }
+        queue.add(assetType.uppercase() to uri)
+    }
+
+    private fun reconcileLocalPreviewUris(
+        projectId: Long,
+        mediaAssets: List<ProjectMediaAssetDto>
+    ) {
+        val queue = pendingLocalPreviewQueue[projectId] ?: return
+        if (queue.isEmpty()) return
+
+        val unboundAssets = mediaAssets
+            .sortedByDescending { it.id }
+            .filter { localPreviewUriMap[it.id] == null }
+
+        val iterator = queue.iterator()
+        val remaining = mutableListOf<Pair<String, Uri>>()
+
+        while (iterator.hasNext()) {
+            val pending = iterator.next()
+            val assetType = pending.first
+            val uri = pending.second
+
+            val target = unboundAssets.firstOrNull { asset ->
+                asset.assetType.equals(assetType, ignoreCase = true) &&
+                        localPreviewUriMap[asset.id] == null
+            }
+
+            if (target != null) {
+                localPreviewUriMap[target.id] = uri
+            } else {
+                remaining.add(pending)
+            }
+        }
+
+        if (remaining.isEmpty()) {
+            pendingLocalPreviewQueue.remove(projectId)
+        } else {
+            pendingLocalPreviewQueue[projectId] = remaining.toMutableList()
+        }
+    }
+
+    fun bindLocalPreviewUri(assetId: Long, uri: Uri) {
+        localPreviewUriMap[assetId] = uri
+    }
+
+    fun localPreviewUriOf(assetId: Long): Uri? = localPreviewUriMap[assetId]
+
+    fun removeLocalPreviewUri(assetId: Long) {
+        localPreviewUriMap.remove(assetId)
+    }
 
     private val runtimeStates = mutableStateMapOf<Long, ProjectRuntimeState>()
 
@@ -238,6 +303,30 @@ class MerchantContentViewModel(
         currentModelAssets.clear()
     }
 
+    fun deriveStage(projectId: Long): LibraryStage {
+        val runtime = runtimeStateOf(projectId)
+        val imageCount = currentMediaAssets.count { it.assetType.equals("IMAGE", true) }
+        val modelCount = currentModelAssets.size
+
+        return when {
+            runtime.publishStatus == "已发布" -> LibraryStage.PUBLISHED
+            runtime.fakeExplodedGuideResult != null || runtime.fakeVideoGuideResult != null -> LibraryStage.READY
+            imageCount == 0 -> LibraryStage.PENDING_UPLOAD
+            modelCount == 0 && runtime.fakeRebuildResult == null -> LibraryStage.PENDING_REBUILD
+            else -> LibraryStage.PENDING_PARSE
+        }
+    }
+
+    fun stageLabel(projectId: Long): String {
+        return when (deriveStage(projectId)) {
+            LibraryStage.PENDING_UPLOAD -> "待上传"
+            LibraryStage.PENDING_REBUILD -> "待重建"
+            LibraryStage.PENDING_PARSE -> "待解析"
+            LibraryStage.READY -> "待发布"
+            LibraryStage.PUBLISHED -> "已发布"
+        }
+    }
+
     fun refreshCurrentProject() {
         selectedProjectId?.let { loadProjectDetail(it) }
     }
@@ -277,14 +366,32 @@ class MerchantContentViewModel(
             isUploading = true
             errorMessage = null
 
+            enqueuePendingLocalPreview(projectId, assetType, uri)
+
             repository.uploadMedia(
                 context = context,
                 projectId = projectId,
                 assetType = assetType,
                 uri = uri
             ).onSuccess {
-                loadProjectDetail(projectId)
-                onSuccess?.invoke()
+                repository.getProjectDetail(projectId)
+                    .onSuccess { detail ->
+                        currentProjectDetail = detail
+                        ensureRuntimeState(detail.project.id)
+
+                        currentMediaAssets.clear()
+                        currentMediaAssets.addAll(detail.mediaAssets)
+
+                        currentModelAssets.clear()
+                        currentModelAssets.addAll(detail.modelAssets)
+
+                        reconcileLocalPreviewUris(projectId, detail.mediaAssets)
+
+                        onSuccess?.invoke()
+                    }
+                    .onFailure { error ->
+                        errorMessage = error.message ?: "刷新项目详情失败"
+                    }
             }.onFailure { error ->
                 errorMessage = error.message ?: "素材上传失败"
             }
@@ -293,27 +400,44 @@ class MerchantContentViewModel(
         }
     }
 
-    fun rebuildProject(
+    fun deleteMedia(
         projectId: Long,
-        sourceAssetIds: List<Long>? = null,
+        mediaId: Long,
         onSuccess: (() -> Unit)? = null
     ) {
         viewModelScope.launch {
-            isRebuilding = true
+            isLoading = true
             errorMessage = null
 
-            repository.rebuildProject(projectId, sourceAssetIds)
-                .onSuccess { models ->
-                    currentModelAssets.clear()
-                    currentModelAssets.addAll(models)
-                    loadProjectDetail(projectId)
+            repository.deleteMedia(projectId, mediaId)
+                .onSuccess {
+                    currentMediaAssets.removeAll { it.id == mediaId }
+                    removeLocalPreviewUri(mediaId)
+
+                    currentProjectDetail = currentProjectDetail?.let { detail ->
+                        if (detail.project.id == projectId) {
+                            detail.copy(
+                                mediaAssets = detail.mediaAssets.filterNot { it.id == mediaId }
+                            )
+                        } else {
+                            detail
+                        }
+                    }
+
+                    runtimeStates[projectId]?.let { state ->
+                        runtimeStates[projectId] = state.copy(
+                            selectedRebuildAssetIds = state.selectedRebuildAssetIds.filterNot { it == mediaId },
+                            selectedParseSourceAssetIds = state.selectedParseSourceAssetIds.filterNot { it == mediaId }
+                        )
+                    }
+
                     onSuccess?.invoke()
                 }
                 .onFailure { error ->
-                    errorMessage = error.message ?: "重建失败"
+                    errorMessage = error.message ?: "删除素材失败"
                 }
 
-            isRebuilding = false
+            isLoading = false
         }
     }
 
@@ -389,13 +513,11 @@ class MerchantContentViewModel(
             state.copy(
                 isFakeRebuilding = false,
                 rebuildProgress = 1f,
-                fakeRebuildResult = "已生成 fake 3D 模型结果，可用于后续解析或展示。",
+                fakeRebuildResult = "已完成模型重建，模型文件已归档到模型文件夹。",
                 publishStatus = if (state.publishStatus == "已发布") "已发布" else "待发布"
             )
         }
 
-        // 这里保留后端模型列表；若你希望“fake 重建后立即出现模型文件夹”，
-        // 可以在此处额外把预置模型映射到 currentModelAssets 或调用 loadModels(projectId)
         loadModels(projectId)
     }
 
@@ -408,7 +530,9 @@ class MerchantContentViewModel(
                     ParseMode.EXPLODED_GUIDE
                 },
                 selectedParseSourceAssetIds = emptyList(),
+                selectedParseModelIds = emptyList(),
                 fakeExplodedGuideResult = null,
+                fakeExplodedImageUrl = null,
                 fakeVideoGuideResult = null,
                 isFakeParsing = false,
                 parseProgress = 0f
@@ -416,15 +540,11 @@ class MerchantContentViewModel(
         }
     }
 
-    fun appendLocalParseModels(projectId: Long, uris: List<Uri>) {
-        if (uris.isEmpty()) return
-
+    fun toggleFakeParseModel(projectId: Long, modelId: Long) {
         updateRuntimeState(projectId) { state ->
-            val mergedUris = (state.localParseModels + uris).distinctBy { it.toString() }
-            state.copy(
-                localParseModels = mergedUris,
-                selectedParseModelUris = mergedUris.map { it.toString() }
-            )
+            val next = state.selectedParseModelIds.toMutableList()
+            if (next.contains(modelId)) next.remove(modelId) else next.add(modelId)
+            state.copy(selectedParseModelIds = next)
         }
     }
 
@@ -440,9 +560,9 @@ class MerchantContentViewModel(
         updateRuntimeState(projectId) {
             it.copy(
                 selectedParseSourceAssetIds = emptyList(),
-                selectedParseModelUris = emptyList(),
-                localParseModels = emptyList(),
+                selectedParseModelIds = emptyList(),
                 fakeExplodedGuideResult = null,
+                fakeExplodedImageUrl = null,
                 fakeVideoGuideResult = null,
                 isFakeParsing = false,
                 parseProgress = 0f
@@ -468,6 +588,7 @@ class MerchantContentViewModel(
                     isFakeParsing = false,
                     parseProgress = 1f,
                     fakeExplodedGuideResult = "已生成爆炸图说明结果，可继续查看或发布。",
+                    fakeExplodedImageUrl = "file:///android_asset/photo/exploded_demo.png",
                     fakeVideoGuideResult = null,
                     publishStatus = if (state.publishStatus == "已发布") "已发布" else "待发布"
                 )
@@ -476,7 +597,8 @@ class MerchantContentViewModel(
                     isFakeParsing = false,
                     parseProgress = 1f,
                     fakeExplodedGuideResult = null,
-                    fakeVideoGuideResult = "已生成教程播放器入口结果，可继续打开播放器或发布。",
+                    fakeExplodedImageUrl = null,
+                    fakeVideoGuideResult = "已生成教程播放器入口结果，可继续打开",
                     publishStatus = if (state.publishStatus == "已发布") "已发布" else "待发布"
                 )
             }

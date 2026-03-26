@@ -171,6 +171,26 @@ class MerchantContentRepository(
         }
     }
 
+    suspend fun deleteMedia(
+        projectId: Long,
+        mediaId: Long
+    ): Result<Unit> {
+        return try {
+            val response = api.deleteMedia(projectId, mediaId)
+
+            if (response.success) {
+                Result.success(Unit)
+            } else {
+                Result.failure(
+                    IllegalStateException(
+                        if (response.message.isNotBlank()) response.message else "删除素材失败"
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
     private fun parseErrorMessage(
         errorBody: String?,
         defaultMessage: String

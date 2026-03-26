@@ -34,6 +34,12 @@ interface MerchantContentApi {
         @Path("projectId") projectId: Long
     ): Response<ApiResponse<Unit>>
 
+    @DELETE("api/merchant/projects/{projectId}/media/{mediaId}")
+    suspend fun deleteMedia(
+        @Path("projectId") projectId: Long,
+        @Path("mediaId") mediaId: Long
+    ): ApiResponse<Unit>
+
     @Multipart
     @POST("api/merchant/projects/{projectId}/media/upload")
     suspend fun uploadMedia(

@@ -52,6 +52,33 @@ import com.example.yunjing.ui.merchant.model.ProjectMediaAssetDto
 import com.example.yunjing.ui.merchant.viewmodel.MerchantContentViewModel
 import com.example.yunjing.ui.pressClick
 import kotlinx.coroutines.delay
+import android.net.Uri
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.core.content.FileProvider
+import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
+import java.io.File
+import coil.compose.AsyncImage
+import com.example.yunjing.ui.merchant.util.createImageUri
+import com.example.yunjing.ui.merchant.util.createVideoUri
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import coil.request.ImageRequest
+import com.example.yunjing.ui.merchant.component.DeleteMediaDialog
 
 private const val UNITY_PLAYER_PACKAGE = "com.example.yunjing.tutorialplayer"
 
@@ -94,6 +121,52 @@ fun MerchantContentScreen(
     val showDeleteProjectDialog = viewModel.showDeleteProjectDialog
     val showEntrySheet = viewModel.showEntrySheet
 
+    var previewMedia by remember { mutableStateOf<Pair<ProjectMediaAssetDto, Uri?>?>(null) }
+    var pendingDeleteMedia by remember { mutableStateOf<ProjectMediaAssetDto?>(null) }
+
+    val captureImageUri = remember { mutableStateOf<Uri?>(null) }
+    val captureVideoUri = remember { mutableStateOf<Uri?>(null) }
+
+    var pendingCameraAction by remember { mutableStateOf<String?>(null) }
+
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        val projectId = currentProject?.id ?: return@rememberLauncherForActivityResult
+        val uri = captureImageUri.value ?: return@rememberLauncherForActivityResult
+
+        if (success) {
+            viewModel.uploadMedia(
+                context = context,
+                projectId = projectId,
+                assetType = "IMAGE",
+                uri = uri
+            )
+            Toast.makeText(context, "拍照上传成功", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "拍照失败或已取消", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val captureVideoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CaptureVideo()
+    ) { success ->
+        val projectId = currentProject?.id ?: return@rememberLauncherForActivityResult
+        val uri = captureVideoUri.value ?: return@rememberLauncherForActivityResult
+
+        if (success) {
+            viewModel.uploadMedia(
+                context = context,
+                projectId = projectId,
+                assetType = "VIDEO",
+                uri = uri
+            )
+            Toast.makeText(context, "拍摄视频上传成功", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "视频拍摄失败或已取消", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 20)
     ) { uris ->
@@ -124,19 +197,47 @@ fun MerchantContentScreen(
         }
     }
 
-    val openModelsLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenMultipleDocuments()
-    ) { uris ->
-        val projectId = currentProject?.id ?: return@rememberLauncherForActivityResult
-        val valid = uris.filter {
-            val v = it.toString().lowercase()
-            v.endsWith(".glb") || v.contains(".glb")
+    fun launchCameraImageCapture() {
+        val uri = createImageUri(context)
+        captureImageUri.value = uri
+        takePictureLauncher.launch(uri)
+    }
+
+    fun launchCameraVideoCapture() {
+        val uri = createVideoUri(context)
+        captureVideoUri.value = uri
+        captureVideoLauncher.launch(uri)
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            when (pendingCameraAction) {
+                "image" -> launchCameraImageCapture()
+                "video" -> launchCameraVideoCapture()
+            }
+        } else {
+            Toast.makeText(context, "未授予相机权限，无法拍摄", Toast.LENGTH_SHORT).show()
         }
-        if (valid.isEmpty() && uris.isNotEmpty()) {
-            Toast.makeText(context, "当前仅支持选择 .glb 模型文件", Toast.LENGTH_SHORT).show()
-            return@rememberLauncherForActivityResult
+        pendingCameraAction = null
+    }
+
+    fun ensureCameraPermissionAndLaunch(action: String) {
+        val granted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (granted) {
+            when (action) {
+                "image" -> launchCameraImageCapture()
+                "video" -> launchCameraVideoCapture()
+            }
+        } else {
+            pendingCameraAction = action
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
-        viewModel.appendLocalParseModels(projectId, valid)
     }
 
     fun openUnityPlayer() {
@@ -229,7 +330,7 @@ fun MerchantContentScreen(
                             id = project.id,
                             name = project.projectName,
                             summary = project.projectDesc ?: "点击进入项目工作台",
-                            status = "后端项目"
+                            status = viewModel.stageLabel(project.id)
                         ),
                         onClick = {
                             viewModel.selectProject(project.id)
@@ -309,8 +410,24 @@ fun MerchantContentScreen(
                         Spacer(Modifier.height(14.dp))
 
                         WorkbenchSectionCard(
+                            title = "模型管理",
+                            desc = "模型文件夹用于存放重建完成后可供解析选择的模型文件，点击重建完成后应能在此查看。",
+                            actionArea = {}
+                        ) {
+                            MaterialFolderCard(
+                                mediaCount = modelAssets.size,
+                                onClick = {
+                                    viewModel.loadModels(currentProject.id)
+                                    viewModel.pageState = ContentPageState.MODEL_FOLDER_MANAGE
+                                }
+                            )
+                        }
+
+                        Spacer(Modifier.height(14.dp))
+
+                        WorkbenchSectionCard(
                             title = "重建",
-                            desc = "从素材文件夹中选择图片素材，保留原先 fake 重建体验，但项目基础数据来自后端。",
+                            desc = "从素材文件夹中勾选图片素材进行重建，完成后模型文件将进入模型文件夹，供后续解析选择。",
                             actionArea = {}
                         ) {
                             MiniChip(
@@ -446,10 +563,16 @@ fun MerchantContentScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 MiniChip(
-                                    text = "导入模型",
+                                    text = "从模型文件夹选择模型",
                                     icon = Icons.Filled.ViewInAr,
-                                    onClick = { openModelsLauncher.launch(arrayOf("*/*")) },
-                                    modifier = Modifier.weight(1f)
+                                    onClick = {
+                                        if (modelAssets.isEmpty()) {
+                                            Toast.makeText(context, "当前暂无模型，请先完成重建", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            viewModel.pageState = ContentPageState.MODEL_FOLDER_SELECT_PARSE
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                                 MiniChip(
                                     text = "清空解析选择",
@@ -470,7 +593,7 @@ fun MerchantContentScreen(
                                             if (runtime.parseMode == ParseMode.EXPLODED_GUIDE) "请先选择说明书图片" else "请先选择解析视频",
                                             Toast.LENGTH_SHORT
                                         ).show()
-                                    } else if (runtime.selectedParseModelUris.isEmpty()) {
+                                    } else if (runtime.selectedParseModelIds.isEmpty()) {
                                         Toast.makeText(context, "请至少选择一个模型文件", Toast.LENGTH_SHORT).show()
                                     } else if (!runtime.isFakeParsing) {
                                         viewModel.startFakeParse(currentProject.id)
@@ -487,34 +610,46 @@ fun MerchantContentScreen(
                                 )
                             }
 
-                            runtime.fakeExplodedGuideResult?.let { result ->
+                            runtime.fakeExplodedGuideResult?.let {
                                 Spacer(Modifier.height(12.dp))
                                 SoftCard(modifier = Modifier.fillMaxWidth()) {
                                     Column(modifier = Modifier.fillMaxWidth()) {
                                         Text("爆炸图结果", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                                         Spacer(Modifier.height(8.dp))
-                                        Text(result, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        Spacer(Modifier.height(12.dp))
-                                        PrimaryPillButton(
-                                            text = "查看爆炸图",
-                                            onClick = {
-                                                Toast.makeText(context, "此处打开已生成的爆炸图说明书（占位）", Toast.LENGTH_SHORT).show()
-                                            }
+                                        Text(
+                                            it,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
+
+                                        runtime.fakeExplodedImageUrl?.let { imageUrl ->
+                                            Spacer(Modifier.height(12.dp))
+                                            AsyncImage(
+                                                model = imageUrl,
+                                                contentDescription = "爆炸图",
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(180.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
 
-                            runtime.fakeVideoGuideResult?.let { result ->
+                            runtime.fakeVideoGuideResult?.let {
                                 Spacer(Modifier.height(12.dp))
                                 SoftCard(modifier = Modifier.fillMaxWidth()) {
                                     Column(modifier = Modifier.fillMaxWidth()) {
-                                        Text("教程播放器", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                        Text("教程播放器结果", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                                         Spacer(Modifier.height(8.dp))
-                                        Text(result, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(
+                                            it,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                         Spacer(Modifier.height(12.dp))
                                         PrimaryPillButton(
-                                            text = "打开教程播放器",
+                                            text = "打开 Unity 教程播放器",
                                             onClick = { openUnityPlayer() }
                                         )
                                     }
@@ -535,6 +670,59 @@ fun MerchantContentScreen(
                                 }
                             }
                         )
+                    }
+                }
+            }
+        }
+
+        ContentPageState.MODEL_FOLDER_MANAGE -> {
+            if (currentProject == null || runtime == null) {
+                viewModel.selectedProjectId = null
+                viewModel.pageState = ContentPageState.PROJECT_LIST
+            } else {
+                val modelAssets = viewModel.currentModelAssets
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .padding(horizontal = 20.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    item {
+                        Spacer(Modifier.height(14.dp))
+                        MiniChip(
+                            text = "返回项目",
+                            icon = Icons.AutoMirrored.Filled.ArrowBack,
+                            onClick = { viewModel.pageState = ContentPageState.PROJECT_DETAIL },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        Text("模型文件夹", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "重建完成后的模型文件会显示在这里，可用于后续解析选择。",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(18.dp))
+                    }
+
+                    if (modelAssets.isEmpty()) {
+                        item {
+                            SoftCard(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    "当前暂无模型文件。请先完成重建，或检查后端是否已返回 fake-model-repo/default 下的模型。",
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    } else {
+                        items(modelAssets, key = { it.id }) { item ->
+                            BackendModelRow(item = item)
+                            Spacer(Modifier.height(10.dp))
+                        }
                     }
                 }
             }
@@ -588,7 +776,15 @@ fun MerchantContentScreen(
                         }
                     } else {
                         items(mediaAssets, key = { it.id }) { item ->
-                            BackendMediaRow(item = item)
+                            BackendMediaRow(
+                                item = item,
+                                onPreview = {
+                                    previewMedia = item to viewModel.localPreviewUriOf(item.id)
+                                },
+                                onDelete = {
+                                    pendingDeleteMedia = item
+                                }
+                            )
                             Spacer(Modifier.height(10.dp))
                         }
                     }
@@ -638,6 +834,59 @@ fun MerchantContentScreen(
                         Spacer(Modifier.height(8.dp))
                         PrimaryPillButton(
                             text = "确认重建选择",
+                            onClick = { viewModel.pageState = ContentPageState.PROJECT_DETAIL }
+                        )
+                    }
+                }
+            }
+        }
+
+        ContentPageState.MODEL_FOLDER_SELECT_PARSE -> {
+            if (currentProject == null || runtime == null) {
+                viewModel.selectedProjectId = null
+                viewModel.pageState = ContentPageState.PROJECT_LIST
+            } else {
+                val modelAssets = viewModel.currentModelAssets
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .padding(horizontal = 20.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    item {
+                        Spacer(Modifier.height(14.dp))
+                        MiniChip(
+                            text = "返回项目",
+                            icon = Icons.AutoMirrored.Filled.ArrowBack,
+                            onClick = { viewModel.pageState = ContentPageState.PROJECT_DETAIL },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        Text("选择解析模型", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "请在模型文件夹中勾选参与解析的模型文件。",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(18.dp))
+                    }
+
+                    items(modelAssets, key = { it.id }) { item ->
+                        BackendSelectableModelRow(
+                            item = item,
+                            selected = runtime.selectedParseModelIds.contains(item.id),
+                            onToggle = { viewModel.toggleFakeParseModel(currentProject.id, item.id) }
+                        )
+                        Spacer(Modifier.height(10.dp))
+                    }
+
+                    item {
+                        Spacer(Modifier.height(8.dp))
+                        PrimaryPillButton(
+                            text = "确认模型选择",
                             onClick = { viewModel.pageState = ContentPageState.PROJECT_DETAIL }
                         )
                     }
@@ -757,16 +1006,57 @@ fun MerchantContentScreen(
     if (showEntrySheet) {
         UploadEntrySheet(
             onDismiss = { viewModel.showEntrySheet = false },
-            onUploadClick = {
+            onUploadImageClick = {
                 viewModel.showEntrySheet = false
                 imagePickerLauncher.launch(
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                 )
             },
-            onCaptureClick = {
-                Toast.makeText(context, "当前版本暂保留相册上传为主", Toast.LENGTH_SHORT).show()
+            onUploadVideoClick = {
                 viewModel.showEntrySheet = false
+                videoPickerLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
+                )
+            },
+            onCaptureImageClick = {
+                viewModel.showEntrySheet = false
+                ensureCameraPermissionAndLaunch("image")
+            },
+            onCaptureVideoClick = {
+                viewModel.showEntrySheet = false
+                ensureCameraPermissionAndLaunch("video")
             }
+        )
+    }
+
+    pendingDeleteMedia?.let { media ->
+        DeleteMediaDialog(
+            fileName = media.fileName ?: "未命名素材",
+            onDismiss = { pendingDeleteMedia = null },
+            onConfirm = {
+                val projectId = currentProject?.id ?: return@DeleteMediaDialog
+                val mediaId = media.id
+
+                viewModel.deleteMedia(
+                    projectId = projectId,
+                    mediaId = mediaId,
+                    onSuccess = {
+                        if (previewMedia?.first?.id == mediaId) {
+                            previewMedia = null
+                        }
+                        pendingDeleteMedia = null
+                        Toast.makeText(context, "素材已删除", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        )
+    }
+
+    previewMedia?.let { (media, localUri) ->
+        BackendMediaPreviewDialog(
+            item = media,
+            localUri = localUri,
+            onDismiss = { previewMedia = null }
         )
     }
 }
@@ -795,13 +1085,103 @@ fun DeleteProjectDialog(
 }
 
 @Composable
-private fun BackendMediaRow(item: ProjectMediaAssetDto) {
+fun BackendMediaRow(
+    item: ProjectMediaAssetDto,
+    onPreview: () -> Unit,
+    onDelete: () -> Unit
+) {
+    SoftCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    item.fileName ?: "未命名素材",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    if (item.assetType.equals("VIDEO", true)) "视频素材" else "图片素材",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onPreview) {
+                    Text("预览")
+                }
+
+                Spacer(Modifier.width(4.dp))
+
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                        .background(androidx.compose.ui.graphics.Color(0xFFFF3B30).copy(alpha = 0.12f))
+                        .pressClick(onClick = onDelete),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ClearAll,
+                        contentDescription = "删除素材",
+                        tint = androidx.compose.ui.graphics.Color(0xFFFF3B30)
+                    )
+                }
+            }
+        }
+    }
+}
+@Composable
+fun BackendSelectableMediaRow(
+    item: ProjectMediaAssetDto,
+    selected: Boolean,
+    onToggle: () -> Unit
+) {
+    SoftCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pressClick(onClick = onToggle),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(item.fileName ?: "未命名素材", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "图片素材",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Icon(
+                imageVector = if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+                contentDescription = null,
+                tint = if (selected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.outline
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun BackendModelRow(item: ProjectModelAssetDto) {
     SoftCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Text(item.fileName ?: "未命名素材", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(item.modelName ?: "未命名模型", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(6.dp))
             Text(
-                if (item.assetType.equals("VIDEO", true)) "视频素材" else "图片素材",
+                item.fileUrl ?: "模型路径为空",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -810,25 +1190,160 @@ private fun BackendMediaRow(item: ProjectMediaAssetDto) {
 }
 
 @Composable
-private fun BackendSelectableMediaRow(
-    item: ProjectMediaAssetDto,
+fun BackendSelectableModelRow(
+    item: ProjectModelAssetDto,
     selected: Boolean,
     onToggle: () -> Unit
 ) {
     SoftCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .pressClick(onClick = onToggle)
+                .pressClick(onClick = onToggle),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(item.fileName ?: "未命名素材", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                (if (item.assetType.equals("VIDEO", true)) "视频素材" else "图片素材") +
-                        if (selected) " · 已选择" else " · 未选择",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            Column(modifier = Modifier.weight(1f)) {
+                Text(item.modelName ?: "未命名模型", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    item.fileUrl ?: "模型路径为空",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Icon(
+                imageVector = if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+                contentDescription = null,
+                tint = if (selected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.outline
+                }
             )
         }
+    }
+}
+
+@Composable
+private fun BackendMediaPreviewDialog(
+    item: ProjectMediaAssetDto,
+    localUri: Uri?,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val remoteUrl = remember(item.fileUrl) { normalizePreviewUrl(item.fileUrl) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭")
+            }
+        },
+        title = {
+            Text(item.fileName ?: "素材预览")
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                when {
+                    item.assetType.equals("VIDEO", true) -> {
+                        when {
+                            localUri != null -> {
+                                AndroidView(
+                                    factory = { ctx ->
+                                        android.widget.VideoView(ctx).apply {
+                                            setVideoURI(localUri)
+                                            setOnPreparedListener { mp ->
+                                                mp.isLooping = true
+                                                start()
+                                            }
+                                        }
+                                    },
+                                    update = { view ->
+                                        view.setVideoURI(localUri)
+                                        view.setOnPreparedListener { mp ->
+                                            mp.isLooping = true
+                                            view.start()
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(260.dp)
+                                )
+                            }
+
+                            !remoteUrl.isNullOrBlank() -> {
+                                Text(
+                                    "当前视频暂无本地缓存",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            else -> {
+                                Text(
+                                    "当前视频暂无可用预览地址",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    localUri != null -> {
+                        AsyncImage(
+                            model = localUri,
+                            contentDescription = item.fileName ?: "图片预览",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(260.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+
+                    !remoteUrl.isNullOrBlank() -> {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(remoteUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = item.fileName ?: "图片预览",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(260.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+
+                    else -> {
+                        Text(
+                            "当前图片暂无可用预览地址",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
+
+private fun normalizePreviewUrl(rawUrl: String?): String? {
+    if (rawUrl.isNullOrBlank()) return null
+
+    return when {
+        rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
+            rawUrl.replace("localhost", "10.0.2.2")
+        }
+
+        rawUrl.startsWith("/") -> {
+            "http://10.0.2.2:8080$rawUrl"
+        }
+
+        else -> rawUrl
     }
 }
