@@ -10,9 +10,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import retrofit2.HttpException
+import retrofit2.Response
 import java.io.File
 import java.io.FileOutputStream
 
@@ -33,30 +35,59 @@ class MerchantContentRepository(
                     projectDesc = projectDesc
                 )
             )
-            if (!response.success || response.data == null) {
-                throw IllegalStateException(response.message.ifBlank { "创建项目失败" })
-            }
-            response.data
+            unwrapBody(response, "创建项目失败")
         }
     }
 
     suspend fun listProjects(userId: Long): Result<List<MerchantProjectDto>> = withContext(Dispatchers.IO) {
         runCatching {
             val response = api.listProjects(userId)
-            if (!response.success || response.data == null) {
-                throw IllegalStateException(response.message.ifBlank { "获取项目列表失败" })
-            }
-            response.data
+            unwrapBody(response, "获取项目列表失败")
         }
     }
 
     suspend fun getProjectDetail(projectId: Long): Result<MerchantProjectDetailDto> = withContext(Dispatchers.IO) {
         runCatching {
             val response = api.getProjectDetail(projectId)
-            if (!response.success || response.data == null) {
-                throw IllegalStateException(response.message.ifBlank { "获取项目详情失败" })
+            unwrapBody(response, "获取项目详情失败")
+        }
+    }
+    suspend fun renameProject(projectId: Long, newName: String): Result<Unit> {
+        return try {
+            val response = api.renameProject(
+                projectId,
+                RenameProjectRequest(projectName = newName)
+            )
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && !body.success) {
+                    Result.failure(RuntimeException(body.message.ifBlank { "重命名失败，请稍后再试" }))
+                } else {
+                    Result.success(Unit)
+                }
+            } else {
+                val message = parseErrorMessage(
+                    errorBody = response.errorBody()?.string(),
+                    defaultMessage = "重命名失败，请稍后再试"
+                )
+                Result.failure(RuntimeException(message))
             }
-            response.data
+        } catch (e: HttpException) {
+            val message = parseErrorMessage(
+                errorBody = e.response()?.errorBody()?.string(),
+                defaultMessage = "重命名失败，请稍后再试"
+            )
+            Result.failure(RuntimeException(message))
+        } catch (e: Exception) {
+            Result.failure(RuntimeException(e.message ?: "重命名失败，请稍后再试"))
+        }
+    }
+
+    suspend fun deleteProject(projectId: Long): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val response = api.deleteProject(projectId)
+            unwrapUnit(response, "删除项目失败")
         }
     }
 
@@ -68,22 +99,25 @@ class MerchantContentRepository(
     ): Result<ProjectMediaAssetDto> = withContext(Dispatchers.IO) {
         runCatching {
             val file = uriToTempFile(context, uri)
-            val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
-            val requestFile = file.asRequestBody(mimeType.toMediaTypeOrNull())
-            val part = MultipartBody.Part.createFormData("file", file.name, requestFile)
-            val assetTypeBody = assetType.toRequestBody("text/plain".toMediaTypeOrNull())
+            try {
+                val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
+                val requestFile = file.asRequestBody(mimeType.toMediaTypeOrNull())
+                val part = MultipartBody.Part.createFormData("file", file.name, requestFile)
+                val assetTypeBody = assetType.toRequestBody("text/plain".toMediaTypeOrNull())
 
-            val response = api.uploadMedia(
-                projectId = projectId,
-                assetType = assetTypeBody,
-                file = part
-            )
+                val response = api.uploadMedia(
+                    projectId = projectId,
+                    assetType = assetTypeBody,
+                    file = part
+                )
 
-            if (!response.success || response.data?.asset == null) {
-                throw IllegalStateException(response.message.ifBlank { "上传素材失败" })
+                val body = unwrapBody(response, "上传素材失败")
+                body.asset ?: throw IllegalStateException("上传素材失败")
+            } finally {
+                if (file.exists()) {
+                    file.delete()
+                }
             }
-
-            response.data.asset
         }
     }
 
@@ -96,20 +130,68 @@ class MerchantContentRepository(
                 projectId = projectId,
                 request = RebuildRequest(sourceAssetIds)
             )
-            if (!response.success || response.data == null) {
-                throw IllegalStateException(response.message.ifBlank { "发起重建失败" })
-            }
-            response.data
+            unwrapBody(response, "发起重建失败")
         }
     }
 
     suspend fun listModels(projectId: Long): Result<List<ProjectModelAssetDto>> = withContext(Dispatchers.IO) {
         runCatching {
             val response = api.listModels(projectId)
-            if (!response.success || response.data == null) {
-                throw IllegalStateException(response.message.ifBlank { "获取模型列表失败" })
+            unwrapBody(response, "获取模型列表失败")
+        }
+    }
+
+    private fun <T> unwrapBody(
+        response: Response<ApiResponse<T>>,
+        defaultMessage: String
+    ): T {
+        if (response.isSuccessful) {
+            val body = response.body() ?: throw IllegalStateException(defaultMessage)
+            if (!body.success) {
+                throw IllegalStateException(body.message.ifBlank { defaultMessage })
             }
-            response.data
+            return body.data ?: throw IllegalStateException(body.message.ifBlank { defaultMessage })
+        } else {
+            throw IllegalStateException(parseErrorMessage(response.errorBody()?.string(), defaultMessage))
+        }
+    }
+
+    private fun unwrapUnit(
+        response: Response<ApiResponse<Unit>>,
+        defaultMessage: String
+    ) {
+        if (response.isSuccessful) {
+            val body = response.body()
+            if (body != null && !body.success) {
+                throw IllegalStateException(body.message.ifBlank { defaultMessage })
+            }
+            return
+        } else {
+            throw IllegalStateException(parseErrorMessage(response.errorBody()?.string(), defaultMessage))
+        }
+    }
+
+    private fun parseErrorMessage(
+        errorBody: String?,
+        defaultMessage: String
+    ): String {
+        if (errorBody.isNullOrBlank()) return defaultMessage
+
+        return try {
+            val json = JSONObject(errorBody)
+
+            val message = json.optString("message")
+            val reason = json.optString("reason")
+            val error = json.optString("error")
+
+            when {
+                message.isNotBlank() && message.lowercase() != "conflict" -> message
+                reason.isNotBlank() && reason.lowercase() != "conflict" -> reason
+                error.isNotBlank() && error.lowercase() != "conflict" -> error
+                else -> defaultMessage
+            }
+        } catch (_: Exception) {
+            defaultMessage
         }
     }
 

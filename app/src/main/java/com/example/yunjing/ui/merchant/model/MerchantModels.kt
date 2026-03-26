@@ -3,6 +3,10 @@ package com.example.yunjing.ui.merchant.model
 import android.net.Uri
 import androidx.compose.ui.graphics.vector.ImageVector
 
+// ----------------------------
+// UI models
+// ----------------------------
+
 data class MerchantTab(
     val route: String,
     val label: String,
@@ -52,7 +56,7 @@ data class ParseResult(
 )
 
 data class MerchantContentProject(
-    val id: String,
+    val id: Long,
     val name: String,
     val status: String,
     val summary: String,
@@ -89,3 +93,7 @@ enum class ProjectMenuAction {
     RENAME,
     DELETE
 }
+
+data class RenameProjectRequest(
+    val projectName: String
+)
