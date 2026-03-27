@@ -81,15 +81,11 @@ import com.example.yunjing.ui.merchant.component.DeleteMediaDialog
 
 import io.github.sceneview.Scene
 import io.github.sceneview.math.Position
-import io.github.sceneview.node.ModelNode
 import io.github.sceneview.rememberCameraManipulator
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironment
 import io.github.sceneview.rememberModelLoader
-import io.github.sceneview.model.ModelInstance
 import com.google.android.filament.LightManager
-import io.github.sceneview.node.LightNode
-
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.CircularProgressIndicator
@@ -101,6 +97,12 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 import androidx.compose.ui.graphics.Color
+import io.github.sceneview.rememberModelInstance
+import androidx.core.net.toUri
+import io.github.sceneview.environment.Environment
+import io.github.sceneview.model.ModelInstance
+import io.github.sceneview.rememberEnvironmentLoader
+
 private const val UNITY_PLAYER_PACKAGE = "com.example.yunjing.tutorialplayer"
 
 /**
@@ -423,6 +425,7 @@ fun MerchantContentScreen(
                             actionArea = {}
                         ) {
                             MaterialFolderCard(
+                                "素材文件夹",
                                 mediaCount = mediaAssets.size,
                                 onClick = { viewModel.pageState = ContentPageState.MEDIA_FOLDER_MANAGE }
                             )
@@ -436,6 +439,7 @@ fun MerchantContentScreen(
                             actionArea = {}
                         ) {
                             MaterialFolderCard(
+                                "模型文件夹",
                                 mediaCount = modelAssets.size,
                                 onClick = {
                                     viewModel.loadModels(currentProject.id)
@@ -733,7 +737,7 @@ fun MerchantContentScreen(
                         item {
                             SoftCard(modifier = Modifier.fillMaxWidth()) {
                                 Text(
-                                    "当前暂无模型文件。请先完成重建，或检查后端是否已返回 fake-model-repo/default 下的模型。",
+                                    "当前暂无模型文件。请先完成重建，或检查后端是否已返回重建好的模型。",
                                     fontSize = 13.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1068,7 +1072,7 @@ fun MerchantContentScreen(
 
     pendingDeleteMedia?.let { media ->
         DeleteMediaDialog(
-            fileName = media.fileName ?: "未命名素材",
+            fileName = media.fileName,
             onDismiss = { pendingDeleteMedia = null },
             onConfirm = {
                 val projectId = currentProject?.id ?: return@DeleteMediaDialog
@@ -1135,7 +1139,7 @@ fun BackendMediaRow(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    item.fileName ?: "未命名素材",
+                    item.fileName,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -1156,18 +1160,18 @@ fun BackendMediaRow(
 
                 Spacer(Modifier.width(4.dp))
 
-                androidx.compose.foundation.layout.Box(
+                Box(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                        .background(androidx.compose.ui.graphics.Color(0xFFFF3B30).copy(alpha = 0.12f))
+                        .background(Color(0xFFFF3B30).copy(alpha = 0.12f))
                         .pressClick(onClick = onDelete),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.ClearAll,
                         contentDescription = "删除素材",
-                        tint = androidx.compose.ui.graphics.Color(0xFFFF3B30)
+                        tint = Color(0xFFFF3B30)
                     )
                 }
             }
@@ -1189,7 +1193,7 @@ fun BackendSelectableMediaRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(item.fileName ?: "未命名素材", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(item.fileName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "图片素材",
@@ -1223,10 +1227,10 @@ fun BackendModelRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(item.modelName ?: "未命名模型", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(item.modelName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    item.fileUrl ?: "模型路径为空",
+                    item.fileUrl,
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1254,10 +1258,10 @@ fun BackendSelectableModelRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(item.modelName ?: "未命名模型", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(item.modelName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    item.fileUrl ?: "模型路径为空",
+                    item.fileUrl,
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1293,7 +1297,7 @@ private fun BackendMediaPreviewDialog(
             }
         },
         title = {
-            Text(item.fileName ?: "素材预览")
+            Text(item.fileName)
         },
         text = {
             Column(
@@ -1346,7 +1350,7 @@ private fun BackendMediaPreviewDialog(
                     localUri != null -> {
                         AsyncImage(
                             model = localUri,
-                            contentDescription = item.fileName ?: "图片预览",
+                            contentDescription = item.fileName,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(260.dp)
@@ -1361,7 +1365,7 @@ private fun BackendMediaPreviewDialog(
                                 .data(remoteUrl)
                                 .crossfade(true)
                                 .build(),
-                            contentDescription = item.fileName ?: "图片预览",
+                            contentDescription = item.fileName,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(260.dp)
@@ -1402,13 +1406,17 @@ private fun ModelPreviewContent(
     model: ProjectModelAssetDto,
     onBack: () -> Unit
 ) {
-    val context = LocalContext.current
     val modelUrl = remember(model.fileUrl) { normalizeModelUrl(model.fileUrl) }
 
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine);
+
+    val environment = rememberEnvironment(environmentLoader) {
+        environmentLoader.createHDREnvironment("environments/qwantani_dusk_2_puresky_2k.hdr")!!
+    }
+
     val cameraManipulator = rememberCameraManipulator()
-    val environment = rememberEnvironment(engine)
 
     var modelInstance by remember(modelUrl) { mutableStateOf<ModelInstance?>(null) }
     var isLoading by remember(modelUrl) { mutableStateOf(false) }
@@ -1419,86 +1427,26 @@ private fun ModelPreviewContent(
         loadError = null
 
         if (modelUrl.isNullOrBlank()) {
-            loadError = "模型地址为空，无法预览"
+            loadError = "模型地址为空"
             return@LaunchedEffect
         }
 
         isLoading = true
-
         try {
-            val localFile = downloadModelToCache(context, modelUrl)
-
-            if (!localFile.exists() || localFile.length() <= 0L) {
-                loadError = "模型文件为空或不存在"
-                return@LaunchedEffect
-            }
-
-            modelInstance = modelLoader.createModelInstance(localFile)
+            modelLoader.loadModelInstanceAsync(
+                fileLocation = modelUrl,
+                onResult = { instance ->
+                    modelInstance = instance
+                    if (instance == null) {
+                        loadError = "模型实例化失败"
+                    }
+                    isLoading = false
+                }
+            )
         } catch (e: Exception) {
             e.printStackTrace()
             loadError = e.message ?: "模型加载失败"
-        } finally {
             isLoading = false
-        }
-    }
-
-    val previewNode = remember(modelUrl, modelInstance) {
-        modelInstance?.let { instance ->
-            ModelNode(
-                modelInstance = instance,
-                scaleToUnits = 1.2f,
-                centerOrigin = Position(0.0f, 0.0f, 0.0f)
-            ).apply {
-                isEditable = true
-            }
-        }
-    }
-
-    val keyLight = remember(engine) {
-        LightNode(
-            engine = engine,
-            type = LightManager.Type.DIRECTIONAL
-        ) {
-            color(1.0f, 1.0f, 1.0f)
-            intensity(120_000.0f)
-            direction(0.3f, -1.0f, -0.8f)
-            castShadows(false)
-        }
-    }
-
-    val fillLight = remember(engine) {
-        LightNode(
-            engine = engine,
-            type = LightManager.Type.DIRECTIONAL
-        ) {
-            color(1.0f, 1.0f, 1.0f)
-            intensity(80_000.0f)
-            direction(-0.8f, -0.4f, 0.2f)
-            castShadows(false)
-        }
-    }
-
-    val backLight = remember(engine) {
-        LightNode(
-            engine = engine,
-            type = LightManager.Type.DIRECTIONAL
-        ) {
-            color(1.0f, 1.0f, 1.0f)
-            intensity(60_000.0f)
-            direction(0.0f, -0.2f, 1.0f)
-            castShadows(false)
-        }
-    }
-
-    val bottomLight = remember(engine) {
-        LightNode(
-            engine = engine,
-            type = LightManager.Type.DIRECTIONAL
-        ) {
-            color(1.0f, 1.0f, 1.0f)
-            intensity(50_000.0f)
-            direction(0.0f, 1.0f, 0.3f)
-            castShadows(false)
         }
     }
 
@@ -1535,19 +1483,6 @@ private fun ModelPreviewContent(
 
         Spacer(Modifier.height(12.dp))
 
-        Text(
-            text = when {
-                isLoading -> "模型加载中"
-                loadError != null -> loadError ?: "模型加载失败"
-                modelInstance != null -> "模型已加载"
-                else -> "等待加载"
-            },
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(Modifier.height(12.dp))
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -1559,86 +1494,88 @@ private fun ModelPreviewContent(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
-                cameraManipulator = cameraManipulator,
-                environment = environment
+                environment = environment,
+                cameraManipulator = cameraManipulator
             ) {
-                addChildNode(keyLight)
-                addChildNode(fillLight)
-                addChildNode(backLight)
-                previewNode?.let { addChildNode(it) }
+                modelInstance?.let { instance ->
+                    ModelNode(
+                        modelInstance = instance,
+                        scaleToUnits = 1.2f,
+                        centerOrigin = Position(0.0f, 0.0f, 0.0f),
+                        isEditable = true
+                    )
+                }
+
+                // 主光：从前上方打下来
+                LightNode(
+                    type = LightManager.Type.DIRECTIONAL,
+                    apply = {
+                        color(1.0f, 1.0f, 1.0f)
+                        intensity(120_000f)
+                        direction(-0.6f, -1.0f, -0.8f)
+                        castShadows(false)
+                    }
+                )
+
+                // 背面补光
+                LightNode(
+                    type = LightManager.Type.DIRECTIONAL,
+                    apply = {
+                        color(1.0f, 1.0f, 1.0f)
+                        intensity(70_000f)
+                        direction(0.6f, -0.5f, 0.8f)
+                        castShadows(false)
+                    }
+                )
+
+                // 左侧补光
+                LightNode(
+                    type = LightManager.Type.DIRECTIONAL,
+                    apply = {
+                        color(1.0f, 1.0f, 1.0f)
+                        intensity(55_000f)
+                        direction(1.0f, -0.2f, 0.0f)
+                        castShadows(false)
+                    }
+                )
+
+                // 右侧补光
+                LightNode(
+                    type = LightManager.Type.DIRECTIONAL,
+                    apply = {
+                        color(1.0f, 1.0f, 1.0f)
+                        intensity(55_000f)
+                        direction(-1.0f, -0.2f, 0.0f)
+                        castShadows(false)
+                    }
+                )
+
+                // 底部补光：专门解决“底面发黑”
+                LightNode(
+                    type = LightManager.Type.DIRECTIONAL,
+                    apply = {
+                        color(1.0f, 1.0f, 1.0f)
+                        intensity(45_000f)
+                        direction(0.0f, 1.0f, 0.0f)
+                        castShadows(false)
+                    }
+                )
             }
 
             when {
-                isLoading -> {
-                    CircularProgressIndicator()
+                modelUrl.isNullOrBlank() -> {
+                    Text("模型地址为空", color = Color.White)
                 }
 
                 loadError != null -> {
-                    Text(
-                        text = loadError ?: "模型加载失败",
-                        color = Color.White
-                    )
+                    Text(loadError ?: "模型加载失败", color = Color.White)
+                }
+
+                isLoading -> {
+                    CircularProgressIndicator()
                 }
             }
         }
-    }
-}
-
-private suspend fun downloadModelToCache(
-    context: android.content.Context,
-    urlString: String
-): File = withContext(Dispatchers.IO) {
-    val modelDir = File(context.cacheDir, "model_preview_cache")
-    if (!modelDir.exists()) {
-        modelDir.mkdirs()
-    }
-
-    val fileName = buildString {
-        append("preview_")
-        append(urlString.hashCode())
-        append(".glb")
-    }
-
-    val targetFile = File(modelDir, fileName)
-
-    if (targetFile.exists() && targetFile.length() > 0L) {
-        return@withContext targetFile
-    }
-
-    val url = URL(urlString)
-    val connection = (url.openConnection() as HttpURLConnection).apply {
-        connectTimeout = 15000
-        readTimeout = 15000
-        requestMethod = "GET"
-        doInput = true
-        connect()
-    }
-
-    try {
-        val responseCode = connection.responseCode
-        if (responseCode !in 200..299) {
-            throw IllegalStateException("模型下载失败，HTTP $responseCode")
-        }
-
-        BufferedInputStream(connection.inputStream).use { input ->
-            FileOutputStream(targetFile).use { output ->
-                val buffer = ByteArray(8 * 1024)
-                while (true) {
-                    val count = input.read(buffer)
-                    if (count == -1) break
-                    output.write(buffer, 0, count)
-                }
-                output.flush()
-            }
-        }
-
-        if (!targetFile.exists() || targetFile.length() <= 0L) {
-            throw IllegalStateException("模型下载完成，但本地文件为空")
-        }
-
-        targetFile
-    } finally {
-        connection.disconnect()
     }
 }
 

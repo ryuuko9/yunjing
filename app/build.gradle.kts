@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
 }
 
 configurations.all {
@@ -36,7 +37,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"
+        kotlinCompilerExtensionVersion = "2.0.21"
     }
 
     kotlinOptions {
@@ -77,7 +78,7 @@ dependencies {
 
     implementation("io.coil-kt:coil-compose:2.7.0")
 
-    implementation("io.github.sceneview:sceneview:2.2.1")
+    implementation("io.github.sceneview:sceneview:3.0.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
 

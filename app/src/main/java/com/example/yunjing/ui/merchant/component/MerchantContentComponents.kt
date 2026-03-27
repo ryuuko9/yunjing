@@ -588,6 +588,7 @@ fun RenameProjectDialog(
 
 @Composable
 fun MaterialFolderCard(
+    folderName: String,
     mediaCount: Int,
     onClick: () -> Unit
 ) {
@@ -607,10 +608,10 @@ fun MaterialFolderCard(
             Spacer(Modifier.width(10.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text("素材文件夹", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(folderName, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "共 $mediaCount 个素材，可统一预览、删除与选择",
+                    "共 $mediaCount 个素材，可统一预览",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

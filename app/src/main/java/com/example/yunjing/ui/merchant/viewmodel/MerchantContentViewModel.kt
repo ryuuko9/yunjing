@@ -53,6 +53,9 @@ class MerchantContentViewModel(
     val projects = mutableStateListOf<MerchantProjectDto>()
     val currentMediaAssets = mutableStateListOf<ProjectMediaAssetDto>()
     val currentModelAssets = mutableStateListOf<ProjectModelAssetDto>()
+    private val projectMediaCountMap = mutableStateMapOf<Long, Int>()
+    private val projectModelCountMap = mutableStateMapOf<Long, Int>()
+
 
     private val localPreviewUriMap = mutableStateMapOf<Long, Uri>()
 
@@ -112,6 +115,19 @@ class MerchantContentViewModel(
     }
 
     private val runtimeStates = mutableStateMapOf<Long, ProjectRuntimeState>()
+    private fun syncProjectAssetCounts(
+        projectId: Long,
+        mediaAssets: List<ProjectMediaAssetDto>,
+        modelAssets: List<ProjectModelAssetDto>
+    ) {
+        projectMediaCountMap[projectId] = mediaAssets.count { it.assetType.equals("IMAGE", true) }
+        projectModelCountMap[projectId] = modelAssets.size
+    }
+
+    private fun clearProjectAssetCounts(projectId: Long) {
+        projectMediaCountMap.remove(projectId)
+        projectModelCountMap.remove(projectId)
+    }
 
     var selectedProjectId by mutableStateOf<Long?>(null)
     var currentProjectDetail by mutableStateOf<MerchantProjectDetailDto?>(null)
@@ -284,6 +300,8 @@ class MerchantContentViewModel(
                     projects.removeAll { it.id == projectId }
                     removeRuntimeState(projectId)
                     showDeleteProjectDialog = false
+                    clearProjectAssetCounts(projectId)
+                    removeRuntimeState(projectId)
 
                     if (selectedProjectId == projectId) {
                         clearSelectedProject()
@@ -318,14 +336,23 @@ class MerchantContentViewModel(
 
     fun deriveStage(projectId: Long): LibraryStage {
         val runtime = runtimeStateOf(projectId)
-        val imageCount = currentMediaAssets.count { it.assetType.equals("IMAGE", true) }
-        val modelCount = currentModelAssets.size
+        val imageCount = projectMediaCountMap[projectId] ?: 0
+        val modelCount = projectModelCountMap[projectId] ?: 0
 
         return when {
             runtime.publishStatus == "已发布" -> LibraryStage.PUBLISHED
-            runtime.fakeExplodedGuideResult != null || runtime.fakeVideoGuideResult != null -> LibraryStage.READY
+
+            runtime.fakeExplodedGuideResult != null ||
+                    runtime.fakeVideoGuideResult != null -> LibraryStage.READY
+
+            runtime.isFakeParsing -> LibraryStage.PENDING_PARSE
+
+            runtime.isFakeRebuilding -> LibraryStage.PENDING_REBUILD
+
             imageCount == 0 -> LibraryStage.PENDING_UPLOAD
+
             modelCount == 0 && runtime.fakeRebuildResult == null -> LibraryStage.PENDING_REBUILD
+
             else -> LibraryStage.PENDING_PARSE
         }
     }
@@ -359,6 +386,12 @@ class MerchantContentViewModel(
 
                     currentModelAssets.clear()
                     currentModelAssets.addAll(detail.modelAssets)
+
+                    syncProjectAssetCounts(
+                        projectId = detail.project.id,
+                        mediaAssets = detail.mediaAssets,
+                        modelAssets = detail.modelAssets
+                    )
                 }
                 .onFailure { error ->
                     errorMessage = error.message ?: "获取项目详情失败"
@@ -398,6 +431,12 @@ class MerchantContentViewModel(
                         currentModelAssets.clear()
                         currentModelAssets.addAll(detail.modelAssets)
 
+                        syncProjectAssetCounts(
+                            projectId = detail.project.id,
+                            mediaAssets = detail.mediaAssets,
+                            modelAssets = detail.modelAssets
+                        )
+
                         reconcileLocalPreviewUris(projectId, detail.mediaAssets)
 
                         onSuccess?.invoke()
@@ -426,6 +465,9 @@ class MerchantContentViewModel(
                 .onSuccess {
                     currentMediaAssets.removeAll { it.id == mediaId }
                     removeLocalPreviewUri(mediaId)
+                    projectMediaCountMap[projectId] = currentMediaAssets.count {
+                        it.assetType.equals("IMAGE", true)
+                    }
 
                     currentProjectDetail = currentProjectDetail?.let { detail ->
                         if (detail.project.id == projectId) {
@@ -462,6 +504,7 @@ class MerchantContentViewModel(
                 .onSuccess { models ->
                     currentModelAssets.clear()
                     currentModelAssets.addAll(models)
+                    projectModelCountMap[projectId] = models.size
                 }
                 .onFailure { error ->
                     errorMessage = error.message ?: "加载模型失败"
@@ -537,7 +580,13 @@ class MerchantContentViewModel(
                             fakeRebuildResult = "已完成模型重建，模型文件已归档到模型文件夹。"
                         )
                     }
-
+                    updateProjectInList(projectId) { project ->
+                        project.copy(
+                            rebuildStatus = "COMPLETED",
+                            hasRebuildOutput = 1,
+                            status = "REBUILT"
+                        )
+                    }
                     loadModels(projectId)
                 }
                 .onFailure { error ->
@@ -552,6 +601,16 @@ class MerchantContentViewModel(
                 }
 
             isLoading = false
+        }
+    }
+
+    private fun updateProjectInList(
+        projectId: Long,
+        transform: (MerchantProjectDto) -> MerchantProjectDto
+    ) {
+        val index = projects.indexOfFirst { it.id == projectId }
+        if (index >= 0) {
+            projects[index] = transform(projects[index])
         }
     }
 
@@ -637,11 +696,25 @@ class MerchantContentViewModel(
                 )
             }
         }
+
+        updateProjectInList(projectId) { project ->
+            project.copy(
+                parseStatus = "COMPLETED",
+                status = "PARSED"
+            )
+        }
     }
 
     fun markFakePublish(projectId: Long) {
         updateRuntimeState(projectId) {
             it.copy(publishStatus = "已发布")
+        }
+
+        updateProjectInList(projectId) { project ->
+            project.copy(
+                publishStatus = "PUBLISHED",
+                status = "PUBLISHED"
+            )
         }
     }
 
