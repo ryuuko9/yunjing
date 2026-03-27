@@ -136,6 +136,19 @@ class MerchantContentViewModel(
     var showRenameProjectDialog by mutableStateOf(false)
     var showDeleteProjectDialog by mutableStateOf(false)
 
+    var previewModel by mutableStateOf<ProjectModelAssetDto?>(null)
+        private set
+
+    fun openModelPreview(model: ProjectModelAssetDto) {
+        previewModel = model
+        pageState = ContentPageState.MODEL_PREVIEW
+    }
+
+    fun closeModelPreview() {
+        previewModel = null
+        pageState = ContentPageState.MODEL_FOLDER_MANAGE
+    }
+
     init {
         loadProjects()
     }
@@ -499,6 +512,8 @@ class MerchantContentViewModel(
     }
 
     fun startFakeRebuild(projectId: Long) {
+        currentModelAssets.clear()
+
         updateRuntimeState(projectId) {
             it.copy(
                 isFakeRebuilding = true,
@@ -509,16 +524,35 @@ class MerchantContentViewModel(
     }
 
     fun finishFakeRebuild(projectId: Long) {
-        updateRuntimeState(projectId) { state ->
-            state.copy(
-                isFakeRebuilding = false,
-                rebuildProgress = 1f,
-                fakeRebuildResult = "已完成模型重建，模型文件已归档到模型文件夹。",
-                publishStatus = if (state.publishStatus == "已发布") "已发布" else "待发布"
-            )
-        }
+        viewModelScope.launch {
+            isLoading = true
+            errorMessage = null
 
-        loadModels(projectId)
+            repository.Rebuild(projectId)
+                .onSuccess {
+                    updateRuntimeState(projectId) { state ->
+                        state.copy(
+                            isFakeRebuilding = false,
+                            rebuildProgress = 1f,
+                            fakeRebuildResult = "已完成模型重建，模型文件已归档到模型文件夹。"
+                        )
+                    }
+
+                    loadModels(projectId)
+                }
+                .onFailure { error ->
+                    updateRuntimeState(projectId) { state ->
+                        state.copy(
+                            isFakeRebuilding = false,
+                            rebuildProgress = 0f,
+                            fakeRebuildResult = null
+                        )
+                    }
+                    errorMessage = error.message ?: "模型重建失败"
+                }
+
+            isLoading = false
+        }
     }
 
     fun toggleFakeParseMode(projectId: Long) {

@@ -58,4 +58,9 @@ interface MerchantContentApi {
     suspend fun listModels(
         @Path("projectId") projectId: Long
     ): Response<ApiResponse<List<ProjectModelAssetDto>>>
+
+    @POST("api/merchant/projects/{projectId}/fake-rebuild")
+    suspend fun Rebuild(
+        @Path("projectId") projectId: Long
+    ): ApiResponse<Unit>
 }

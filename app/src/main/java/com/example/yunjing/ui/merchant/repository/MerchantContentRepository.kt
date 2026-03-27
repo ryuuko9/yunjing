@@ -134,6 +134,15 @@ class MerchantContentRepository(
         }
     }
 
+    suspend fun Rebuild(projectId: Long): Result<Unit> {
+        return runCatching {
+            val resp = api.Rebuild(projectId)
+            if (!resp.success) {
+                throw IllegalStateException(resp.message.ifBlank { "模型重建失败" })
+            }
+        }
+    }
+
     suspend fun listModels(projectId: Long): Result<List<ProjectModelAssetDto>> = withContext(Dispatchers.IO) {
         runCatching {
             val response = api.listModels(projectId)

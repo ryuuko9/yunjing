@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.foundation.layout)
     implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
 
     // Compose BOM
     val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
@@ -75,6 +76,8 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
+
+    implementation("io.github.sceneview:sceneview:2.2.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
 

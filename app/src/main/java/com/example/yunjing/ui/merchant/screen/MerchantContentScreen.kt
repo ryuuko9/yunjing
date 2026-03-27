@@ -61,7 +61,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.core.content.FileProvider
 import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
 import java.io.File
 import coil.compose.AsyncImage
@@ -80,6 +79,28 @@ import androidx.core.content.ContextCompat
 import coil.request.ImageRequest
 import com.example.yunjing.ui.merchant.component.DeleteMediaDialog
 
+import io.github.sceneview.Scene
+import io.github.sceneview.math.Position
+import io.github.sceneview.node.ModelNode
+import io.github.sceneview.rememberCameraManipulator
+import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberEnvironment
+import io.github.sceneview.rememberModelLoader
+import io.github.sceneview.model.ModelInstance
+import com.google.android.filament.LightManager
+import io.github.sceneview.node.LightNode
+
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.CircularProgressIndicator
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.BufferedInputStream
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+
+import androidx.compose.ui.graphics.Color
 private const val UNITY_PLAYER_PACKAGE = "com.example.yunjing.tutorialplayer"
 
 /**
@@ -720,7 +741,10 @@ fun MerchantContentScreen(
                         }
                     } else {
                         items(modelAssets, key = { it.id }) { item ->
-                            BackendModelRow(item = item)
+                            BackendModelRow(
+                                item = item,
+                                onPreview = { viewModel.openModelPreview(item)}
+                            )
                             Spacer(Modifier.height(10.dp))
                         }
                     }
@@ -944,6 +968,19 @@ fun MerchantContentScreen(
                         )
                     }
                 }
+            }
+        }
+
+        ContentPageState.MODEL_PREVIEW -> {
+            val previewModel = viewModel.previewModel
+
+            if (currentProject == null || previewModel == null) {
+                viewModel.closeModelPreview()
+            } else {
+                ModelPreviewContent(
+                    model = previewModel,
+                    onBack = { viewModel.closeModelPreview() }
+                )
             }
         }
     }
@@ -1175,16 +1212,29 @@ fun BackendSelectableMediaRow(
 }
 
 @Composable
-fun BackendModelRow(item: ProjectModelAssetDto) {
+fun BackendModelRow(
+    item: ProjectModelAssetDto,
+    onPreview: () -> Unit
+) {
     SoftCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(item.modelName ?: "未命名模型", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                item.fileUrl ?: "模型路径为空",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(item.modelName ?: "未命名模型", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    item.fileUrl ?: "模型路径为空",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            TextButton(onClick = onPreview) {
+                Text("预览")
+            }
         }
     }
 }
@@ -1345,5 +1395,270 @@ private fun normalizePreviewUrl(rawUrl: String?): String? {
         }
 
         else -> rawUrl
+    }
+}
+@Composable
+private fun ModelPreviewContent(
+    model: ProjectModelAssetDto,
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    val modelUrl = remember(model.fileUrl) { normalizeModelUrl(model.fileUrl) }
+
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val cameraManipulator = rememberCameraManipulator()
+    val environment = rememberEnvironment(engine)
+
+    var modelInstance by remember(modelUrl) { mutableStateOf<ModelInstance?>(null) }
+    var isLoading by remember(modelUrl) { mutableStateOf(false) }
+    var loadError by remember(modelUrl) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(modelUrl) {
+        modelInstance = null
+        loadError = null
+
+        if (modelUrl.isNullOrBlank()) {
+            loadError = "模型地址为空，无法预览"
+            return@LaunchedEffect
+        }
+
+        isLoading = true
+
+        try {
+            val localFile = downloadModelToCache(context, modelUrl)
+
+            if (!localFile.exists() || localFile.length() <= 0L) {
+                loadError = "模型文件为空或不存在"
+                return@LaunchedEffect
+            }
+
+            modelInstance = modelLoader.createModelInstance(localFile)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            loadError = e.message ?: "模型加载失败"
+        } finally {
+            isLoading = false
+        }
+    }
+
+    val previewNode = remember(modelUrl, modelInstance) {
+        modelInstance?.let { instance ->
+            ModelNode(
+                modelInstance = instance,
+                scaleToUnits = 1.2f,
+                centerOrigin = Position(0.0f, 0.0f, 0.0f)
+            ).apply {
+                isEditable = true
+            }
+        }
+    }
+
+    val keyLight = remember(engine) {
+        LightNode(
+            engine = engine,
+            type = LightManager.Type.DIRECTIONAL
+        ) {
+            color(1.0f, 1.0f, 1.0f)
+            intensity(120_000.0f)
+            direction(0.3f, -1.0f, -0.8f)
+            castShadows(false)
+        }
+    }
+
+    val fillLight = remember(engine) {
+        LightNode(
+            engine = engine,
+            type = LightManager.Type.DIRECTIONAL
+        ) {
+            color(1.0f, 1.0f, 1.0f)
+            intensity(80_000.0f)
+            direction(-0.8f, -0.4f, 0.2f)
+            castShadows(false)
+        }
+    }
+
+    val backLight = remember(engine) {
+        LightNode(
+            engine = engine,
+            type = LightManager.Type.DIRECTIONAL
+        ) {
+            color(1.0f, 1.0f, 1.0f)
+            intensity(60_000.0f)
+            direction(0.0f, -0.2f, 1.0f)
+            castShadows(false)
+        }
+    }
+
+    val bottomLight = remember(engine) {
+        LightNode(
+            engine = engine,
+            type = LightManager.Type.DIRECTIONAL
+        ) {
+            color(1.0f, 1.0f, 1.0f)
+            intensity(50_000.0f)
+            direction(0.0f, 1.0f, 0.3f)
+            castShadows(false)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 20.dp)
+    ) {
+        Spacer(Modifier.height(14.dp))
+
+        MiniChip(
+            text = "返回模型文件夹",
+            icon = Icons.AutoMirrored.Filled.ArrowBack,
+            onClick = onBack,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(14.dp))
+
+        Text(
+            text = model.modelName?.ifBlank { "模型预览" } ?: "模型预览",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Spacer(Modifier.height(6.dp))
+
+        Text(
+            text = modelUrl ?: "模型地址为空",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text = when {
+                isLoading -> "模型加载中"
+                loadError != null -> loadError ?: "模型加载失败"
+                modelInstance != null -> "模型已加载"
+                else -> "等待加载"
+            },
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            Scene(
+                modifier = Modifier.fillMaxSize(),
+                engine = engine,
+                modelLoader = modelLoader,
+                cameraManipulator = cameraManipulator,
+                environment = environment
+            ) {
+                addChildNode(keyLight)
+                addChildNode(fillLight)
+                addChildNode(backLight)
+                previewNode?.let { addChildNode(it) }
+            }
+
+            when {
+                isLoading -> {
+                    CircularProgressIndicator()
+                }
+
+                loadError != null -> {
+                    Text(
+                        text = loadError ?: "模型加载失败",
+                        color = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+private suspend fun downloadModelToCache(
+    context: android.content.Context,
+    urlString: String
+): File = withContext(Dispatchers.IO) {
+    val modelDir = File(context.cacheDir, "model_preview_cache")
+    if (!modelDir.exists()) {
+        modelDir.mkdirs()
+    }
+
+    val fileName = buildString {
+        append("preview_")
+        append(urlString.hashCode())
+        append(".glb")
+    }
+
+    val targetFile = File(modelDir, fileName)
+
+    if (targetFile.exists() && targetFile.length() > 0L) {
+        return@withContext targetFile
+    }
+
+    val url = URL(urlString)
+    val connection = (url.openConnection() as HttpURLConnection).apply {
+        connectTimeout = 15000
+        readTimeout = 15000
+        requestMethod = "GET"
+        doInput = true
+        connect()
+    }
+
+    try {
+        val responseCode = connection.responseCode
+        if (responseCode !in 200..299) {
+            throw IllegalStateException("模型下载失败，HTTP $responseCode")
+        }
+
+        BufferedInputStream(connection.inputStream).use { input ->
+            FileOutputStream(targetFile).use { output ->
+                val buffer = ByteArray(8 * 1024)
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count == -1) break
+                    output.write(buffer, 0, count)
+                }
+                output.flush()
+            }
+        }
+
+        if (!targetFile.exists() || targetFile.length() <= 0L) {
+            throw IllegalStateException("模型下载完成，但本地文件为空")
+        }
+
+        targetFile
+    } finally {
+        connection.disconnect()
+    }
+}
+
+private fun normalizeModelUrl(rawUrl: String?): String? {
+    val value = rawUrl?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+
+    return when {
+        value.startsWith("http://", ignoreCase = true) ||
+                value.startsWith("https://", ignoreCase = true) -> {
+            value
+                .replace("localhost", "10.0.2.2")
+                .replace("127.0.0.1", "10.0.2.2")
+        }
+
+        value.startsWith("/") -> {
+            "http://10.0.2.2:8080$value"
+        }
+
+        else -> {
+            "http://10.0.2.2:8080/$value"
+        }
     }
 }
