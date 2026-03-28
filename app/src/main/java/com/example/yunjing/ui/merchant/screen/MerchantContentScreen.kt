@@ -1,11 +1,16 @@
 package com.example.yunjing.ui.merchant.screen
 
+import android.Manifest
 import android.content.ActivityNotFoundException
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,28 +19,49 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.demo.picker.PickerUnityActivity
 import com.example.yunjing.ui.merchant.component.CreateProjectDialog
+import com.example.yunjing.ui.merchant.component.DeleteMediaDialog
 import com.example.yunjing.ui.merchant.component.MaterialFolderCard
 import com.example.yunjing.ui.merchant.component.MiniChip
 import com.example.yunjing.ui.merchant.component.PrimaryPillButton
@@ -49,61 +75,21 @@ import com.example.yunjing.ui.merchant.component.WorkbenchSectionCard
 import com.example.yunjing.ui.merchant.model.ContentPageState
 import com.example.yunjing.ui.merchant.model.ParseMode
 import com.example.yunjing.ui.merchant.model.ProjectMediaAssetDto
-import com.example.yunjing.ui.merchant.viewmodel.MerchantContentViewModel
-import com.example.yunjing.ui.pressClick
-import kotlinx.coroutines.delay
-import android.net.Uri
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
-import androidx.compose.material3.Icon
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
-import java.io.File
-import coil.compose.AsyncImage
 import com.example.yunjing.ui.merchant.util.createImageUri
 import com.example.yunjing.ui.merchant.util.createVideoUri
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
-import coil.request.ImageRequest
-import com.example.yunjing.ui.merchant.component.DeleteMediaDialog
-
+import com.example.yunjing.ui.merchant.viewmodel.MerchantContentViewModel
+import com.example.yunjing.ui.pressClick
+import com.google.android.filament.LightManager
 import io.github.sceneview.Scene
 import io.github.sceneview.math.Position
+import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.rememberCameraManipulator
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironment
-import io.github.sceneview.rememberModelLoader
-import com.google.android.filament.LightManager
-
-import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.CircularProgressIndicator
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.io.BufferedInputStream
-import java.io.FileOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
-
-import androidx.compose.ui.graphics.Color
-import io.github.sceneview.rememberModelInstance
-import androidx.core.net.toUri
-import io.github.sceneview.environment.Environment
-import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.rememberEnvironmentLoader
-
-private const val UNITY_PLAYER_PACKAGE = "com.example.yunjing.tutorialplayer"
+import io.github.sceneview.rememberModelLoader
+import kotlinx.coroutines.delay
 
 /**
  * 这是“旧版 UI + 后端项目数据”的合并版本。
@@ -265,14 +251,16 @@ fun MerchantContentScreen(
 
     fun openUnityPlayer() {
         try {
-            val launchIntent = context.packageManager.getLaunchIntentForPackage(UNITY_PLAYER_PACKAGE)
-            if (launchIntent != null) {
-                context.startActivity(launchIntent)
-            } else {
-                Toast.makeText(context, "教程播放器占位包未接入", Toast.LENGTH_SHORT).show()
-            }
+            val intent = android.content.Intent(context, PickerUnityActivity::class.java)
+            context.startActivity(intent)
         } catch (_: ActivityNotFoundException) {
-            Toast.makeText(context, "未找到教程播放器应用", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "未找到 Unity 页面", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(
+                context,
+                "打开 Unity 失败：${e.message ?: "未知错误"}",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
@@ -1391,11 +1379,14 @@ private fun normalizePreviewUrl(rawUrl: String?): String? {
 
     return when {
         rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
-            rawUrl.replace("localhost", "10.0.2.2")
+//            rawUrl.replace("localhost", "10.0.2.2")
+            rawUrl.replace("localhost", "172.27.188.58")
+
         }
 
         rawUrl.startsWith("/") -> {
-            "http://10.0.2.2:8080$rawUrl"
+//            "http://10.0.2.2:8080$rawUrl"
+            "http://172.27.188.58:8080$rawUrl"
         }
 
         else -> rawUrl
@@ -1586,16 +1577,20 @@ private fun normalizeModelUrl(rawUrl: String?): String? {
         value.startsWith("http://", ignoreCase = true) ||
                 value.startsWith("https://", ignoreCase = true) -> {
             value
-                .replace("localhost", "10.0.2.2")
-                .replace("127.0.0.1", "10.0.2.2")
+//                .replace("localhost", "10.0.2.2")
+//                .replace("127.0.0.1", "10.0.2.2")
+                .replace("localhost", "172.27.188.58")
+                .replace("127.0.0.1", "172.27.188.58")
         }
 
         value.startsWith("/") -> {
-            "http://10.0.2.2:8080$value"
+//            "http://10.0.2.2:8080$value"
+            "http://172.27.188.58:8080$value"
         }
 
         else -> {
-            "http://10.0.2.2:8080/$value"
+//            "http://10.0.2.2:8080$value"
+            "http://172.27.188.58:8080/$value"
         }
     }
 }

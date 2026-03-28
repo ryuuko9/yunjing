@@ -14,3 +14,13 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Unity exported / generated
+unityLibrary/build/
+unityLibrary/symbols/
+unityLibrary/src/main/Il2CppOutputProject/
+unityLibrary/src/main/assets/bin/
+unityLibrary/src/main/cpp/
+unityLibrary/src/main/jniLibs/
+unityLibrary/**/il2cpp_cache/
+unityLibrary/**/artifacts/
