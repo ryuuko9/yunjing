@@ -91,12 +91,12 @@ enum class ContentPageState {
     MODEL_FOLDER_SELECT_PARSE,
     MODEL_PREVIEW
 }
-
-enum class ProjectMenuAction {
-    RENAME,
-    DELETE
-}
-
 data class RenameProjectRequest(
     val projectName: String
+)
+
+data class ParseProjectRequest(
+    val parseMode: String,
+    val sourceAssetIds: List<Long>,
+    val modelIds: List<Long>
 )

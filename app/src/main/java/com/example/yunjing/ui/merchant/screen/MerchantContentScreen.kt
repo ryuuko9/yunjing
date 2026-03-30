@@ -9,6 +9,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,9 +20,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -50,12 +54,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -132,6 +139,7 @@ fun MerchantContentScreen(
 
     var previewMedia by remember { mutableStateOf<Pair<ProjectMediaAssetDto, Uri?>?>(null) }
     var pendingDeleteMedia by remember { mutableStateOf<ProjectMediaAssetDto?>(null) }
+    var explodedImagePreviewUrl by remember { mutableStateOf<String?>(null) }
 
     val captureImageUri = remember { mutableStateOf<Uri?>(null) }
     val captureVideoUri = remember { mutableStateOf<Uri?>(null) }
@@ -360,9 +368,14 @@ fun MerchantContentScreen(
             } else {
                 val mediaAssets = viewModel.currentMediaAssets
                 val modelAssets = viewModel.currentModelAssets
+                val detailProject = viewModel.currentProjectDetail?.project
+                val explodedImageUrl = detailProject?.explodedImageUrl
+                val tutorialVideoUrl = detailProject?.tutorialVideoUrl
+                val tutorialTitle = detailProject?.tutorialTitle
+                val parseResultText = detailProject?.parseResultText
                 val canPublish = runtime.fakeRebuildResult != null ||
-                        runtime.fakeExplodedGuideResult != null ||
-                        runtime.fakeVideoGuideResult != null
+                        !explodedImageUrl.isNullOrBlank() ||
+                        !tutorialVideoUrl.isNullOrBlank()
 
                 LazyColumn(
                     state = projectDetailListState,
@@ -400,7 +413,9 @@ fun MerchantContentScreen(
                         Text(currentProject.projectName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "${currentProject.projectDesc ?: "项目内容工作台"} · ${runtime.publishStatus}",
+                            "${currentProject.projectDesc ?: "项目内容工作台"} · ${
+                                if (currentProject.publishStatus == "PUBLISHED") "已发布" else runtime.publishStatus
+                            }",
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -555,15 +570,21 @@ fun MerchantContentScreen(
                                 },
                                 icon = Icons.Filled.Description,
                                 onClick = {
-                                    val hasCandidate = if (runtime.parseMode == ParseMode.EXPLODED_GUIDE) {
-                                        mediaAssets.any { it.assetType.equals("IMAGE", true) }
-                                    } else {
-                                        mediaAssets.any { it.assetType.equals("VIDEO", true) }
-                                    }
+                                    val hasCandidate =
+                                        if (runtime.parseMode == ParseMode.EXPLODED_GUIDE) {
+                                            mediaAssets.any { it.assetType.equals("IMAGE", true) }
+                                        } else {
+                                            mediaAssets.any { it.assetType.equals("VIDEO", true) }
+                                        }
                                     if (!hasCandidate) {
-                                        Toast.makeText(context, "当前项目暂无可解析素材，请先上传", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            "当前项目暂无可解析素材，请先上传",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     } else {
-                                        viewModel.pageState = ContentPageState.MEDIA_FOLDER_SELECT_PARSE
+                                        viewModel.pageState =
+                                            ContentPageState.MEDIA_FOLDER_SELECT_PARSE
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth()
@@ -580,9 +601,14 @@ fun MerchantContentScreen(
                                     icon = Icons.Filled.ViewInAr,
                                     onClick = {
                                         if (modelAssets.isEmpty()) {
-                                            Toast.makeText(context, "当前暂无模型，请先完成重建", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(
+                                                context,
+                                                "当前暂无模型，请先完成重建",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         } else {
-                                            viewModel.pageState = ContentPageState.MODEL_FOLDER_SELECT_PARSE
+                                            viewModel.pageState =
+                                                ContentPageState.MODEL_FOLDER_SELECT_PARSE
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth()
@@ -607,7 +633,11 @@ fun MerchantContentScreen(
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     } else if (runtime.selectedParseModelIds.isEmpty()) {
-                                        Toast.makeText(context, "请至少选择一个模型文件", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            "请至少选择一个模型文件",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     } else if (!runtime.isFakeParsing) {
                                         viewModel.startFakeParse(currentProject.id)
                                     }
@@ -623,40 +653,53 @@ fun MerchantContentScreen(
                                 )
                             }
 
-                            runtime.fakeExplodedGuideResult?.let {
+                            if (!explodedImageUrl.isNullOrBlank()) {
                                 Spacer(Modifier.height(12.dp))
                                 SoftCard(modifier = Modifier.fillMaxWidth()) {
                                     Column(modifier = Modifier.fillMaxWidth()) {
                                         Text("爆炸图结果", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                                         Spacer(Modifier.height(8.dp))
                                         Text(
-                                            it,
+                                            parseResultText ?: "已生成爆炸图说明结果，可继续查看或发布。",
                                             fontSize = 12.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
 
-                                        runtime.fakeExplodedImageUrl?.let { imageUrl ->
-                                            Spacer(Modifier.height(12.dp))
-                                            AsyncImage(
-                                                model = imageUrl,
-                                                contentDescription = "爆炸图",
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .height(180.dp)
-                                            )
-                                        }
+                                        Spacer(Modifier.height(12.dp))
+                                        AsyncImage(
+                                            model = normalizePreviewUrl(explodedImageUrl),
+                                            contentDescription = "爆炸图缩略图",
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(180.dp)
+                                                .clip(RoundedCornerShape(12.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+
+                                        Spacer(Modifier.height(12.dp))
+                                        PrimaryPillButton(
+                                            text = "预览爆炸图",
+                                            onClick = {
+                                                explodedImagePreviewUrl = normalizePreviewUrl(explodedImageUrl)
+                                            }
+                                        )
                                     }
                                 }
                             }
 
-                            runtime.fakeVideoGuideResult?.let {
+                            if (!tutorialVideoUrl.isNullOrBlank()) {
                                 Spacer(Modifier.height(12.dp))
                                 SoftCard(modifier = Modifier.fillMaxWidth()) {
                                     Column(modifier = Modifier.fillMaxWidth()) {
-                                        Text("教程播放器结果", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                        Text(
+                                            tutorialTitle ?: "教程播放器结果",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
                                         Spacer(Modifier.height(8.dp))
                                         Text(
-                                            it,
+                                            parseResultText
+                                                ?: "已生成教程播放器入口结果，可继续打开。",
                                             fontSize = 12.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -669,7 +712,6 @@ fun MerchantContentScreen(
                                 }
                             }
                         }
-
                         Spacer(Modifier.height(14.dp))
 
                         PrimaryPillButton(
@@ -1088,6 +1130,13 @@ fun MerchantContentScreen(
             onDismiss = { previewMedia = null }
         )
     }
+
+    explodedImagePreviewUrl?.let { imageUrl ->
+        ExplodedImagePreviewDialog(
+            imageUrl = imageUrl,
+            onDismiss = { explodedImagePreviewUrl = null }
+        )
+    }
 }
 
 @Composable
@@ -1379,14 +1428,14 @@ private fun normalizePreviewUrl(rawUrl: String?): String? {
 
     return when {
         rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
-//            rawUrl.replace("localhost", "10.0.2.2")
-            rawUrl.replace("localhost", "172.27.188.58")
+            rawUrl.replace("localhost", "10.0.2.2")
+//            rawUrl.replace("localhost", "172.27.188.58")
 
         }
 
         rawUrl.startsWith("/") -> {
-//            "http://10.0.2.2:8080$rawUrl"
-            "http://172.27.188.58:8080$rawUrl"
+            "http://10.0.2.2:8080$rawUrl"
+//            "http://172.27.188.58:8080$rawUrl"
         }
 
         else -> rawUrl
@@ -1577,20 +1626,87 @@ private fun normalizeModelUrl(rawUrl: String?): String? {
         value.startsWith("http://", ignoreCase = true) ||
                 value.startsWith("https://", ignoreCase = true) -> {
             value
-//                .replace("localhost", "10.0.2.2")
-//                .replace("127.0.0.1", "10.0.2.2")
-                .replace("localhost", "172.27.188.58")
-                .replace("127.0.0.1", "172.27.188.58")
+                .replace("localhost", "10.0.2.2")
+                .replace("127.0.0.1", "10.0.2.2")
+//                .replace("localhost", "172.27.188.58")
+//                .replace("127.0.0.1", "172.27.188.58")
         }
 
         value.startsWith("/") -> {
-//            "http://10.0.2.2:8080$value"
-            "http://172.27.188.58:8080$value"
+            "http://10.0.2.2:8080$value"
+//            "http://172.27.188.58:8080$value"
         }
 
         else -> {
-//            "http://10.0.2.2:8080$value"
-            "http://172.27.188.58:8080/$value"
+            "http://10.0.2.2:8080$value"
+//            "http://172.27.188.58:8080/$value"
+        }
+    }
+}
+
+@Composable
+private fun ExplodedImagePreviewDialog(
+    imageUrl: String,
+    onDismiss: () -> Unit
+) {
+    var scale by remember { mutableStateOf(1f) }
+    var offsetX by remember { mutableStateOf(0f) }
+    var offsetY by remember { mutableStateOf(0f) }
+
+    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+        val newScale = (scale * zoomChange).coerceIn(1f, 5f)
+
+        if (newScale == 1f) {
+            offsetX = 0f
+            offsetY = 0f
+        } else {
+            offsetX += panChange.x
+            offsetY += panChange.y
+        }
+
+        scale = newScale
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .systemBarsPadding()
+                .navigationBarsPadding()
+        ) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = "爆炸图全屏预览",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .transformable(transformState)
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offsetX,
+                        translationY = offsetY
+                    ),
+                contentScale = ContentScale.Fit
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text("关闭", color = Color.White)
+                }
+            }
         }
     }
 }

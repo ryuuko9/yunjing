@@ -4,7 +4,15 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import com.example.yunjing.ui.merchant.model.*
+import com.example.yunjing.ui.merchant.model.ApiResponse
+import com.example.yunjing.ui.merchant.model.CreateProjectRequest
+import com.example.yunjing.ui.merchant.model.MerchantProjectDetailDto
+import com.example.yunjing.ui.merchant.model.MerchantProjectDto
+import com.example.yunjing.ui.merchant.model.ParseProjectRequest
+import com.example.yunjing.ui.merchant.model.ProjectMediaAssetDto
+import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
+import com.example.yunjing.ui.merchant.model.RebuildRequest
+import com.example.yunjing.ui.merchant.model.RenameProjectRequest
 import com.example.yunjing.ui.merchant.network.MerchantContentApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -249,6 +257,39 @@ class MerchantContentRepository(
             } else {
                 null
             }
+        }
+    }
+
+    suspend fun parseProject(
+        projectId: Long,
+        parseMode: String,
+        sourceAssetIds: List<Long>,
+        modelIds: List<Long>
+    ): Result<MerchantProjectDetailDto> {
+        return try {
+            val response = api.parseProject(
+                projectId = projectId,
+                request = ParseProjectRequest(
+                    parseMode = parseMode,
+                    sourceAssetIds = sourceAssetIds,
+                    modelIds = modelIds
+                )
+            )
+
+            if (!response.success) {
+                Result.failure(
+                    IllegalStateException(response.message.ifBlank { "解析失败" })
+                )
+            } else {
+                val detail = response.data
+                if (detail == null) {
+                    Result.failure(IllegalStateException("解析成功但未返回项目详情"))
+                } else {
+                    Result.success(detail)
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }

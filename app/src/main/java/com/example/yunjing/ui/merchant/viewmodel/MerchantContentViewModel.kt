@@ -45,9 +45,6 @@ class MerchantContentViewModel(
         val fakeRebuildResult: String? = null,
         val isFakeParsing: Boolean = false,
         val parseProgress: Float = 0f,
-        val fakeExplodedGuideResult: String? = null,
-        val fakeExplodedImageUrl: String? = null,
-        val fakeVideoGuideResult: String? = null,
     )
 
     val projects = mutableStateListOf<MerchantProjectDto>()
@@ -338,12 +335,13 @@ class MerchantContentViewModel(
         val runtime = runtimeStateOf(projectId)
         val imageCount = projectMediaCountMap[projectId] ?: 0
         val modelCount = projectModelCountMap[projectId] ?: 0
+        val project = projects.firstOrNull { it.id == projectId }
 
         return when {
-            runtime.publishStatus == "已发布" -> LibraryStage.PUBLISHED
+            project?.publishStatus == "PUBLISHED" || runtime.publishStatus == "已发布" -> LibraryStage.PUBLISHED
 
-            runtime.fakeExplodedGuideResult != null ||
-                    runtime.fakeVideoGuideResult != null -> LibraryStage.READY
+            !project?.explodedImageUrl.isNullOrBlank() ||
+                    !project?.tutorialVideoUrl.isNullOrBlank() -> LibraryStage.READY
 
             runtime.isFakeParsing -> LibraryStage.PENDING_PARSE
 
@@ -392,6 +390,8 @@ class MerchantContentViewModel(
                         mediaAssets = detail.mediaAssets,
                         modelAssets = detail.modelAssets
                     )
+
+                    updateProjectInList(detail.project.id) { detail.project }
                 }
                 .onFailure { error ->
                     errorMessage = error.message ?: "获取项目详情失败"
@@ -624,9 +624,6 @@ class MerchantContentViewModel(
                 },
                 selectedParseSourceAssetIds = emptyList(),
                 selectedParseModelIds = emptyList(),
-                fakeExplodedGuideResult = null,
-                fakeExplodedImageUrl = null,
-                fakeVideoGuideResult = null,
                 isFakeParsing = false,
                 parseProgress = 0f
             )
@@ -654,9 +651,6 @@ class MerchantContentViewModel(
             it.copy(
                 selectedParseSourceAssetIds = emptyList(),
                 selectedParseModelIds = emptyList(),
-                fakeExplodedGuideResult = null,
-                fakeExplodedImageUrl = null,
-                fakeVideoGuideResult = null,
                 isFakeParsing = false,
                 parseProgress = 0f
             )
@@ -667,41 +661,57 @@ class MerchantContentViewModel(
         updateRuntimeState(projectId) {
             it.copy(
                 isFakeParsing = true,
-                parseProgress = 0f,
-                fakeExplodedGuideResult = null,
-                fakeVideoGuideResult = null
+                parseProgress = 0f
             )
         }
     }
 
     fun finishFakeParse(projectId: Long) {
-        updateRuntimeState(projectId) { state ->
-            if (state.parseMode == ParseMode.EXPLODED_GUIDE) {
-                state.copy(
-                    isFakeParsing = false,
-                    parseProgress = 1f,
-                    fakeExplodedGuideResult = "已生成爆炸图说明结果，可继续查看或发布。",
-                    fakeExplodedImageUrl = "file:///android_asset/photo/exploded_demo.png",
-                    fakeVideoGuideResult = null,
-                    publishStatus = if (state.publishStatus == "已发布") "已发布" else "待发布"
-                )
-            } else {
-                state.copy(
-                    isFakeParsing = false,
-                    parseProgress = 1f,
-                    fakeExplodedGuideResult = null,
-                    fakeExplodedImageUrl = null,
-                    fakeVideoGuideResult = "已生成教程播放器入口结果，可继续打开",
-                    publishStatus = if (state.publishStatus == "已发布") "已发布" else "待发布"
-                )
-            }
-        }
+        val state = runtimeStateOf(projectId)
 
-        updateProjectInList(projectId) { project ->
-            project.copy(
-                parseStatus = "COMPLETED",
-                status = "PARSED"
-            )
+        viewModelScope.launch {
+            isLoading = true
+            errorMessage = null
+
+            repository.parseProject(
+                projectId = projectId,
+                parseMode = state.parseMode.name,
+                sourceAssetIds = state.selectedParseSourceAssetIds,
+                modelIds = state.selectedParseModelIds
+            ).onSuccess { detail ->
+                currentProjectDetail = detail
+
+                currentMediaAssets.clear()
+                currentMediaAssets.addAll(detail.mediaAssets)
+
+                currentModelAssets.clear()
+                currentModelAssets.addAll(detail.modelAssets)
+
+                syncProjectAssetCounts(
+                    projectId = detail.project.id,
+                    mediaAssets = detail.mediaAssets,
+                    modelAssets = detail.modelAssets
+                )
+
+                updateRuntimeState(projectId) {
+                    it.copy(
+                        isFakeParsing = false,
+                        parseProgress = 1f
+                    )
+                }
+
+                updateProjectInList(projectId) { detail.project }
+            }.onFailure { error ->
+                updateRuntimeState(projectId) {
+                    it.copy(
+                        isFakeParsing = false,
+                        parseProgress = 0f
+                    )
+                }
+                errorMessage = error.message ?: "解析失败"
+            }
+
+            isLoading = false
         }
     }
 
