@@ -106,6 +106,13 @@ class MerchantContentViewModel(
         localPreviewUriMap[assetId] = uri
     }
 
+    fun openProjectFromDashboard(projectId: Long) {
+        selectedProjectId = projectId
+        pageState = ContentPageState.PROJECT_DETAIL
+        ensureRuntimeState(projectId)
+        loadProjectDetail(projectId)
+    }
+
     fun localPreviewUriOf(assetId: Long): Uri? = localPreviewUriMap[assetId]
 
     fun removeLocalPreviewUri(assetId: Long) {

@@ -118,7 +118,8 @@ import kotlinx.coroutines.delay
  */
 @Composable
 fun MerchantContentScreen(
-    viewModel: MerchantContentViewModel
+    viewModel: MerchantContentViewModel,
+    initialProjectId: Long? = null
 ) {
     val context = LocalContext.current
 
@@ -138,6 +139,13 @@ fun MerchantContentScreen(
     val pageState = viewModel.pageState
     val currentProject = viewModel.currentProject()
     val runtime = currentProject?.let { viewModel.runtimeStateOf(it.id) }
+
+    LaunchedEffect(initialProjectId, projects.size) {
+        val targetId = initialProjectId ?: return@LaunchedEffect
+        if (projects.any { it.id == targetId }) {
+            viewModel.openProjectFromDashboard(targetId)
+        }
+    }
 
     val showCreateProjectDialog = viewModel.showCreateProjectDialog
     val showRenameProjectDialog = viewModel.showRenameProjectDialog
@@ -1512,6 +1520,7 @@ private fun normalizePreviewUrl(rawUrl: String?): String? {
         else -> rawUrl
     }
 }
+
 @Composable
 private fun ModelPreviewContent(
     model: ProjectModelAssetDto,
