@@ -139,7 +139,7 @@ class MerchantContentRepository(
                 projectId = projectId,
                 request = RebuildRequest(sourceAssetIds)
             )
-            unwrapBody(response, "发起重建失败")
+            unwrapBody(response, "模型重建失败")
         }
     }
 

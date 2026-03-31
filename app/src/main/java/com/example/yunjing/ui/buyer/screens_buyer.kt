@@ -15,6 +15,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,20 +57,25 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -100,6 +107,7 @@ import com.google.zxing.RGBLuminanceSource
 import com.google.zxing.common.HybridBinarizer
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
+import kotlin.math.max
 
 /**
  * 买家主壳：自绘底部栏
@@ -235,6 +243,17 @@ fun BuyerMainShell(
                     selectedTutorial = selectedTutorial,
                     onPrimaryScan = { launchQrScanner() },
                     onPickLocalQrImage = { launchLocalQrImagePicker() },
+                    onDeleteTutorial = { tutorial ->
+                        buyerTutorialViewModel.deleteTutorial(
+                            tutorialId = tutorial.id,
+                            buyerUserId = buyerUserId,
+                            onSuccess = {
+                                Toast.makeText(context, "教程已移除", Toast.LENGTH_SHORT).show()
+                                selectedTutorial = null
+                                innerNav.popBackStack()
+                            }
+                        )
+                    },
                     onSelectTutorial = { tutorial ->
                         selectedTutorial = tutorial
                         innerNav.navigate("buyer_tutorial_detail")
@@ -274,6 +293,7 @@ private fun BuyerTabNavHost(
     onPrimaryScan: () -> Unit,
     onPickLocalQrImage: () -> Unit,
     onSelectTutorial: (BuyerTutorialUi) -> Unit,
+    onDeleteTutorial: (BuyerTutorialUi) -> Unit,
     onBackTutorialDetail: () -> Unit
 ) {
     NavHost(
@@ -302,7 +322,10 @@ private fun BuyerTabNavHost(
         composable("buyer_tutorial_detail") {
             BuyerTutorialDetailScreen(
                 tutorial = selectedTutorial,
-                onBack = onBackTutorialDetail
+                onBack = onBackTutorialDetail,
+                onDelete = {
+                    selectedTutorial?.let { onDeleteTutorial(it) }
+                }
             )
         }
 
@@ -762,152 +785,9 @@ private fun BuyerTutorialScreen(
         }
     }
 }
-@Composable
-private fun BuyerTutorialDetailScreen(
-    tutorial: BuyerTutorialItem?,
-    onBack: () -> Unit
-) {
-    val context = LocalContext.current
-    var explodedImagePreviewUrl by remember { mutableStateOf<String?>(null) }
-
-    if (tutorial == null) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .padding(horizontal = 20.dp)
-        ) {
-            Spacer(Modifier.height(14.dp))
-            PrimaryPillButton(
-                text = "返回教程列表",
-                onClick = onBack
-            )
-            Spacer(Modifier.height(18.dp))
-            SoftCard(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "教程不存在或已被移除",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        return
-    }
-
-    val explodedPreviewUrl = remember(tutorial.explodedImageUrl) {
-        normalizeBuyerPreviewUrl(tutorial.explodedImageUrl)
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .padding(horizontal = 20.dp)
-    ) {
-        Spacer(Modifier.height(14.dp))
-
-        PrimaryPillButton(
-            text = "返回教程列表",
-            onClick = onBack
-        )
-
-        Spacer(Modifier.height(14.dp))
-
-        Text(
-            text = tutorial.title,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = "发布码：${tutorial.publishCode}",
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(Modifier.height(14.dp))
-
-        if (!explodedPreviewUrl.isNullOrBlank()) {
-            SoftCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = "爆炸图",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(8.dp))
-
-                    AsyncImage(
-                        model = explodedPreviewUrl,
-                        contentDescription = "爆炸图缩略图",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-
-                    Spacer(Modifier.height(12.dp))
-
-                    PrimaryPillButton(
-                        text = "查看爆炸图",
-                        onClick = {
-                            explodedImagePreviewUrl = explodedPreviewUrl
-                        }
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(14.dp))
-        }
-
-        if (!tutorial.tutorialVideoUrl.isNullOrBlank()) {
-            SoftCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = tutorial.tutorialTitle ?: "教程播放器",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "点击下方按钮可打开 Unity 教程播放器",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(Modifier.height(12.dp))
-
-                    PrimaryPillButton(
-                        text = "打开 Unity 教程播放器",
-                        onClick = {
-                            openBuyerUnityPlayer(context, tutorial)
-                        }
-                    )
-                }
-            }
-        } else {
-            SoftCard(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "当前教程暂无可播放的视频教程入口",
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-
-    explodedImagePreviewUrl?.let { imageUrl ->
-        BuyerExplodedImagePreviewDialog(
-            imageUrl = imageUrl,
-            onDismiss = { explodedImagePreviewUrl = null }
-        )
-    }
-}
-
 private fun openBuyerUnityPlayer(
     context: Context,
-    tutorial: BuyerTutorialItem
+    tutorial: BuyerTutorialUi
 ) {
     try {
         val intent = Intent(context, PickerUnityActivity::class.java).apply {
@@ -932,15 +812,87 @@ private fun normalizeBuyerPreviewUrl(rawUrl: String?): String? {
 
     return when {
         rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
-//            rawUrl.replace("localhost", "10.0.2.2")
-            rawUrl.replace("localhost", "172.27.188.58")
+            rawUrl.replace("localhost", "10.0.2.2")
+//            rawUrl.replace("localhost", "192.168.31.100")
         }
 
         rawUrl.startsWith("/") -> {
-//            "http://10.0.2.2:8080$rawUrl"
-            "http://172.27.188.58:8080$rawUrl"
+            "http://10.0.2.2:8080$rawUrl"
+//            "http://192.168.31.100:8080$rawUrl"
         }
         else -> rawUrl
+    }
+}
+
+@Composable
+private fun BuyerZoomableImageViewer(
+    imageUrl: String,
+    modifier: Modifier = Modifier,
+    minScale: Float = 1f,
+    maxScale: Float = 4f
+) {
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var containerSize by remember { mutableStateOf(IntSize.Zero) }
+
+    fun reset() {
+        scale = 1f
+        offset = Offset.Zero
+    }
+
+    Box(
+        modifier = modifier
+            .background(Color.Black)
+            .onSizeChanged { containerSize = it }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onDoubleTap = {
+                        if (scale > 1f) {
+                            reset()
+                        } else {
+                            scale = 2f
+                            offset = Offset.Zero
+                        }
+                    }
+                )
+            }
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    val newScale = (scale * zoom).coerceIn(minScale, maxScale)
+
+                    if (newScale <= 1f) {
+                        scale = 1f
+                        offset = Offset.Zero
+                        return@detectTransformGestures
+                    }
+
+                    scale = newScale
+                    offset += pan
+
+                    val maxX = max(0f, containerSize.width * (scale - 1f) / 2f)
+                    val maxY = max(0f, containerSize.height * (scale - 1f) / 2f)
+
+                    offset = Offset(
+                        x = offset.x.coerceIn(-maxX, maxX),
+                        y = offset.y.coerceIn(-maxY, maxY)
+                    )
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = "爆炸图全屏预览",
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationX = offset.x
+                    translationY = offset.y
+                },
+            contentScale = ContentScale.Fit
+        )
     }
 }
 
@@ -962,11 +914,9 @@ private fun BuyerExplodedImagePreviewDialog(
                 .background(Color.Black)
                 .statusBarsPadding()
         ) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = "爆炸图全屏预览",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit
+            BuyerZoomableImageViewer(
+                imageUrl = imageUrl,
+                modifier = Modifier.fillMaxSize()
             )
 
             Row(
@@ -1430,7 +1380,8 @@ private fun DangerLogoutButton(
 @Composable
 private fun BuyerTutorialDetailScreen(
     tutorial: BuyerTutorialUi?,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val context = LocalContext.current
     var previewExploded by remember { mutableStateOf(false) }
@@ -1500,17 +1451,18 @@ private fun BuyerTutorialDetailScreen(
             SoftCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Text(
-                        tutorial.tutorialTitle ?: "教程播放器",
+                        text = tutorial.tutorialTitle ?: "教程播放器",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "点击后可打开 Unity 教程播放器",
+                        text = "点击后可打开 Unity 教程播放器",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(12.dp))
+
                     PrimaryPillButton(
                         text = "打开 Unity 教程播放器",
                         onClick = {
@@ -1534,39 +1486,38 @@ private fun BuyerTutorialDetailScreen(
                     )
                 }
             }
+
+            Spacer(Modifier.height(14.dp))
         }
-    }
 
-    if (previewExploded) {
-        Dialog(
-            onDismissRequest = { previewExploded = false },
-            properties = androidx.compose.ui.window.DialogProperties(
-                usePlatformDefaultWidth = false,
-                decorFitsSystemWindows = false
-            )
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-            ) {
-                AsyncImage(
-                    model = tutorial.explodedImageUrl,
-                    contentDescription = "爆炸图全屏预览",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Fit
-                )
-
+        SoftCard(modifier = Modifier.fillMaxWidth()) {
+            Column {
                 Text(
-                    text = "关闭",
-                    color = Color.White,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(20.dp)
-                        .pressClick { previewExploded = false }
+                    text = "移除教程",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "移除后，该项目会从“我的教程”中删除，但不会影响商家端已发布内容。",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(12.dp))
+
+                DangerDeleteButton(
+                    text = "从我的教程中移除",
+                    onClick = onDelete
                 )
             }
         }
+    }
+
+    if (previewExploded && !tutorial.explodedImageUrl.isNullOrBlank()) {
+        BuyerExplodedImagePreviewDialog(
+            imageUrl = tutorial.explodedImageUrl,
+            onDismiss = { previewExploded = false }
+        )
     }
 }
 
@@ -1738,5 +1689,32 @@ private fun decodeQrFromImageUriWithMlKit(
     } catch (e: Exception) {
         e.printStackTrace()
         onResult(null)
+    }
+}
+
+@Composable
+private fun DangerDeleteButton(
+    text: String,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(18.dp)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .clip(shape)
+            .background(Color(0xFFD92D20))
+            .pressClick(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

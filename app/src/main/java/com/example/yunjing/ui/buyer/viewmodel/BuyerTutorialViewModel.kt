@@ -89,4 +89,30 @@ class BuyerTutorialViewModel(
             isLoading = false
         }
     }
+
+    fun deleteTutorial(
+        tutorialId: Long,
+        buyerUserId: Long,
+        onSuccess: (() -> Unit)? = null
+    ) {
+        viewModelScope.launch {
+            isLoading = true
+            runCatching {
+                repository.deleteTutorial(tutorialId, buyerUserId)
+            }.onSuccess { response ->
+                if (response.success) {
+                    tutorials.removeAll { it.id == tutorialId }
+                    if (selectedTutorial?.id == tutorialId) {
+                        selectedTutorial = null
+                    }
+                    onSuccess?.invoke()
+                } else {
+                    errorMessage = response.message.ifBlank { "删除教程失败" }
+                }
+            }.onFailure {
+                errorMessage = it.message ?: "删除教程失败"
+            }
+            isLoading = false
+        }
+    }
 }

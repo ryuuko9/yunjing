@@ -22,4 +22,11 @@ class BuyerTutorialRepository(
     ): ApiResponse<BuyerTutorialDto> {
         return api.importTutorial(publishCode, buyerUserId)
     }
+
+    suspend fun deleteTutorial(
+        tutorialId: Long,
+        buyerUserId: Long
+    ): ApiResponse<Unit> {
+        return api.deleteTutorial(tutorialId, buyerUserId)
+    }
 }

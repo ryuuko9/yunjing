@@ -1424,9 +1424,26 @@ private fun BackendMediaPreviewDialog(
                             }
 
                             !remoteUrl.isNullOrBlank() -> {
-                                Text(
-                                    "当前视频暂无本地缓存",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                AndroidView(
+                                    factory = { ctx ->
+                                        android.widget.VideoView(ctx).apply {
+                                            setVideoPath(remoteUrl)
+                                            setOnPreparedListener { mp ->
+                                                mp.isLooping = true
+                                                start()
+                                            }
+                                        }
+                                    },
+                                    update = { view ->
+                                        view.setVideoPath(remoteUrl)
+                                        view.setOnPreparedListener { mp ->
+                                            mp.isLooping = true
+                                            view.start()
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(260.dp)
                                 )
                             }
 
@@ -1483,13 +1500,13 @@ private fun normalizePreviewUrl(rawUrl: String?): String? {
 
     return when {
         rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
-//            rawUrl.replace("localhost", "10.0.2.2")
-            rawUrl.replace("localhost", "172.27.188.58")
+            rawUrl.replace("localhost", "10.0.2.2")
+//            rawUrl.replace("localhost", "192.168.31.100")
         }
 
         rawUrl.startsWith("/") -> {
-//            "http://10.0.2.2:8080$rawUrl"
-            "http://172.27.188.58:8080$rawUrl"
+            "http://10.0.2.2:8080$rawUrl"
+//            "http://192.168.31.100:8080$rawUrl"
         }
 
         else -> rawUrl
@@ -1680,20 +1697,20 @@ private fun normalizeModelUrl(rawUrl: String?): String? {
         value.startsWith("http://", ignoreCase = true) ||
                 value.startsWith("https://", ignoreCase = true) -> {
             value
-//                .replace("localhost", "10.0.2.2")
-//                .replace("127.0.0.1", "10.0.2.2")
-                .replace("localhost", "172.27.188.58")
-                .replace("127.0.0.1", "172.27.188.58")
+                .replace("localhost", "10.0.2.2")
+                .replace("127.0.0.1", "10.0.2.2")
+//                .replace("localhost", "192.168.31.100")
+//                .replace("127.0.0.1", "192.168.31.100")
         }
 
         value.startsWith("/") -> {
             "http://10.0.2.2:8080$value"
-//            "http://172.27.188.58:8080$value"
+//            "http://192.168.31.100:8080$value"
         }
 
         else -> {
             "http://10.0.2.2:8080$value"
-//            "http://172.27.188.58:8080/$value"
+//            "http://192.168.31.100:8080/$value"
         }
     }
 }

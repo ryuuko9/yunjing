@@ -113,12 +113,13 @@ class MerchantContentViewModel(
     }
 
     private val runtimeStates = mutableStateMapOf<Long, ProjectRuntimeState>()
+
     private fun syncProjectAssetCounts(
         projectId: Long,
         mediaAssets: List<ProjectMediaAssetDto>,
         modelAssets: List<ProjectModelAssetDto>
     ) {
-        projectMediaCountMap[projectId] = mediaAssets.count { it.assetType.equals("IMAGE", true) }
+        projectMediaCountMap[projectId] = mediaAssets.size
         projectModelCountMap[projectId] = modelAssets.size
     }
 
@@ -556,8 +557,6 @@ class MerchantContentViewModel(
     }
 
     fun startFakeRebuild(projectId: Long) {
-        currentModelAssets.clear()
-
         updateRuntimeState(projectId) {
             it.copy(
                 isFakeRebuilding = true,
@@ -568,38 +567,73 @@ class MerchantContentViewModel(
     }
 
     fun finishFakeRebuild(projectId: Long) {
+        val selectedAssetIds = runtimeStateOf(projectId).selectedRebuildAssetIds
+
+        if (selectedAssetIds.isEmpty()) {
+            updateRuntimeState(projectId) { state ->
+                state.copy(
+                    isFakeRebuilding = false,
+                    rebuildProgress = 0f,
+                    fakeRebuildResult = null
+                )
+            }
+            errorMessage = "请先选择重建素材"
+            return
+        }
+
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
 
-            repository.Rebuild(projectId)
-                .onSuccess {
-                    updateRuntimeState(projectId) { state ->
-                        state.copy(
-                            isFakeRebuilding = false,
-                            rebuildProgress = 1f,
-                            fakeRebuildResult = "已完成模型重建，模型文件已归档到模型文件夹。"
-                        )
+            repository.rebuildProject(
+                projectId = projectId,
+                sourceAssetIds = selectedAssetIds
+            ).onSuccess { models ->
+                currentModelAssets.clear()
+                currentModelAssets.addAll(models)
+                projectModelCountMap[projectId] = models.size
+
+                currentProjectDetail = currentProjectDetail?.let { detail ->
+                    if (detail.project.id == projectId) {
+                        detail.copy(modelAssets = models)
+                    } else {
+                        detail
                     }
-                    updateProjectInList(projectId) { project ->
-                        project.copy(
-                            rebuildStatus = "COMPLETED",
-                            hasRebuildOutput = 1,
-                            status = "REBUILT"
-                        )
-                    }
-                    loadModels(projectId)
                 }
-                .onFailure { error ->
-                    updateRuntimeState(projectId) { state ->
-                        state.copy(
-                            isFakeRebuilding = false,
-                            rebuildProgress = 0f,
-                            fakeRebuildResult = null
-                        )
-                    }
-                    errorMessage = error.message ?: "模型重建失败"
+
+                updateRuntimeState(projectId) { state ->
+                    state.copy(
+                        isFakeRebuilding = false,
+                        rebuildProgress = 1f,
+                        fakeRebuildResult = if (models.isEmpty()) {
+                            "重建已完成，但后端暂未返回模型文件。"
+                        } else {
+                            "已完成模型重建，模型文件已归档到模型文件夹。"
+                        }
+                    )
                 }
+
+                updateProjectInList(projectId) { project ->
+                    project.copy(
+                        rebuildStatus = "COMPLETED",
+                        hasRebuildOutput = if (models.isNotEmpty()) 1 else project.hasRebuildOutput,
+                        status = "REBUILT"
+                    )
+                }
+
+                // 关键：无论返回体是否完整，都强制刷新一次详情和模型列表
+                loadProjectDetail(projectId)
+                loadModels(projectId)
+            }.onFailure { error ->
+                updateRuntimeState(projectId) { state ->
+                    state.copy(
+                        isFakeRebuilding = false,
+                        rebuildProgress = 0f,
+                        fakeRebuildResult = null
+                    )
+                }
+                errorMessage = error.message ?: "模型重建失败"
+            }
 
             isLoading = false
         }
