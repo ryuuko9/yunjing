@@ -11,13 +11,16 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.example.yunjing.data.AuthStore
+import com.example.yunjing.data.RetrofitClient
 import com.example.yunjing.data.RoleStore
 import com.example.yunjing.data.SessionState
 import com.example.yunjing.data.UserRole
 import com.example.yunjing.ui.AuthScreen
-import com.example.yunjing.ui.BuyerMainShell
+import com.example.yunjing.ui.buyer.BuyerMainShell
 import com.example.yunjing.ui.merchant.MerchantMainShell
 import com.example.yunjing.ui.RoleSelectScreen
+import com.example.yunjing.ui.buyer.repository.BuyerTutorialRepository
+import com.example.yunjing.ui.buyer.viewmodel.BuyerTutorialViewModel
 import kotlinx.coroutines.launch
 
 @Composable
@@ -111,6 +114,14 @@ fun AppNav() {
 
         // 3) 买家主界面（退出/切换统一回 Gate）
         composable(Destinations.BUYER_MAIN) {
+            val buyerTutorialViewModel = remember {
+                BuyerTutorialViewModel(
+                    BuyerTutorialRepository(
+                        RetrofitClient.buyerApiService
+                    )
+                )
+            }
+
             BuyerMainShell(
                 onSwitchRole = {
                     scope.launch {
@@ -129,7 +140,8 @@ fun AppNav() {
                             launchSingleTop = true
                         }
                     }
-                }
+                },
+                buyerTutorialViewModel = buyerTutorialViewModel
             )
         }
 

@@ -11,6 +11,7 @@ import com.example.yunjing.ui.merchant.model.MerchantProjectDto
 import com.example.yunjing.ui.merchant.model.ParseProjectRequest
 import com.example.yunjing.ui.merchant.model.ProjectMediaAssetDto
 import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
+import com.example.yunjing.ui.merchant.model.ProjectResponseDto
 import com.example.yunjing.ui.merchant.model.RebuildRequest
 import com.example.yunjing.ui.merchant.model.RenameProjectRequest
 import com.example.yunjing.ui.merchant.network.MerchantContentApi
@@ -291,5 +292,9 @@ class MerchantContentRepository(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    suspend fun publishProject(projectId: Long): ApiResponse<ProjectResponseDto> {
+        return api.publishProject(projectId)
     }
 }

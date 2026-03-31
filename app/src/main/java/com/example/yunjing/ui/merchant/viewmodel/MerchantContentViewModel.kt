@@ -15,6 +15,7 @@ import com.example.yunjing.ui.merchant.model.MerchantProjectDto
 import com.example.yunjing.ui.merchant.model.ParseMode
 import com.example.yunjing.ui.merchant.model.ProjectMediaAssetDto
 import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
+import com.example.yunjing.ui.merchant.model.toMerchantProjectDto
 import com.example.yunjing.ui.merchant.repository.MerchantContentRepository
 import kotlinx.coroutines.launch
 
@@ -47,7 +48,7 @@ class MerchantContentViewModel(
         val parseProgress: Float = 0f,
     )
 
-    val projects = mutableStateListOf<MerchantProjectDto>()
+    var projects = mutableStateListOf<MerchantProjectDto>()
     val currentMediaAssets = mutableStateListOf<ProjectMediaAssetDto>()
     val currentModelAssets = mutableStateListOf<ProjectModelAssetDto>()
     private val projectMediaCountMap = mutableStateMapOf<Long, Int>()
@@ -730,5 +731,36 @@ class MerchantContentViewModel(
 
     fun clearError() {
         errorMessage = null
+    }
+
+    fun publishProject(
+        projectId: Long,
+        onSuccess: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            runCatching {
+                repository.publishProject(projectId)
+            }.onSuccess { response ->
+                if (response.success && response.data != null) {
+                    val updatedProject = response.data
+
+                    val updatedList = projects.map {
+                        if (it.id == projectId) updatedProject.toMerchantProjectDto() else it
+                    }
+                    projects.clear()
+                    projects.addAll(updatedList)
+
+                    currentProjectDetail = currentProjectDetail?.copy(
+                        project = updatedProject.toMerchantProjectDto()
+                    )
+
+                    onSuccess()
+                } else {
+                    errorMessage = response.message.ifBlank { "发布失败" }
+                }
+            }.onFailure { e ->
+                errorMessage = e.message ?: "发布失败"
+            }
+        }
     }
 }

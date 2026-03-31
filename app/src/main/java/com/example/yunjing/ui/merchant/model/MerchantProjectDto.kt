@@ -8,7 +8,7 @@ data class MerchantProjectDto(
     val coverUrl: String? = null,
     val status: String,
     val summary: String? = null,
-    val hasRebuildOutput: Int,
+    val hasRebuildOutput: Int?,
     val rebuildStatus: String,
     val parseMode: String? = null,
     val parseResultText: String? = null,
@@ -17,6 +17,10 @@ data class MerchantProjectDto(
     val tutorialTitle: String? = null,
     val parseStatus: String,
     val publishStatus: String,
+    val publishCode: String?,
+    val publishUrl: String?,
+    val qrCodeBase64: String?,
+    val publishedAt: String?,
     val createdAt: String? = null,
     val updatedAt: String? = null
 )

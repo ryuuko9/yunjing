@@ -3,7 +3,9 @@ package com.example.yunjing.ui.merchant.screen
 import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Base64
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -54,6 +56,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -88,6 +92,9 @@ import com.example.yunjing.ui.merchant.util.createVideoUri
 import com.example.yunjing.ui.merchant.viewmodel.MerchantContentViewModel
 import com.example.yunjing.ui.pressClick
 import com.google.android.filament.LightManager
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.common.InputImage
 import io.github.sceneview.Scene
 import io.github.sceneview.math.Position
 import io.github.sceneview.model.ModelInstance
@@ -373,9 +380,10 @@ fun MerchantContentScreen(
                 val tutorialVideoUrl = detailProject?.tutorialVideoUrl
                 val tutorialTitle = detailProject?.tutorialTitle
                 val parseResultText = detailProject?.parseResultText
-                val canPublish = runtime.fakeRebuildResult != null ||
-                        !explodedImageUrl.isNullOrBlank() ||
-                        !tutorialVideoUrl.isNullOrBlank()
+                val canPublish =
+                    (detailProject?.hasRebuildOutput == 1) ||
+                            !explodedImageUrl.isNullOrBlank() ||
+                            !tutorialVideoUrl.isNullOrBlank()
 
                 LazyColumn(
                     state = projectDetailListState,
@@ -715,16 +723,63 @@ fun MerchantContentScreen(
                         Spacer(Modifier.height(14.dp))
 
                         PrimaryPillButton(
-                            text = if (canPublish) "发布当前项目" else "发布当前项目（需先生成结果）",
+                            text = if (canPublish) {
+                                if (currentProject.publishStatus == "PUBLISHED") "重新生成发布二维码" else "发布当前项目"
+                            } else {
+                                "发布当前项目（需先生成结果）"
+                            },
                             onClick = {
                                 if (!canPublish) {
                                     Toast.makeText(context, "请先完成重建或解析中的至少一项成果", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    viewModel.markFakePublish(currentProject.id)
-                                    Toast.makeText(context, "发布成功（当前为本地占位逻辑）", Toast.LENGTH_SHORT).show()
+                                    viewModel.publishProject(
+                                        projectId = currentProject.id,
+                                        onSuccess = {
+                                            Toast.makeText(context, "发布成功", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
                                 }
                             }
                         )
+
+                        val publishQrBase64 = detailProject?.qrCodeBase64
+                        val publishUrl = detailProject?.publishUrl
+                        val qrBitmap = remember(publishQrBase64) { decodeBase64ToImageBitmap(publishQrBase64) }
+
+                        if (!publishQrBase64.isNullOrBlank()) {
+                            Spacer(Modifier.height(12.dp))
+                            SoftCard(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Text("项目发布二维码", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                    Spacer(Modifier.height(8.dp))
+
+                                    if (qrBitmap != null) {
+                                        androidx.compose.foundation.Image(
+                                            bitmap = qrBitmap,
+                                            contentDescription = "项目发布二维码",
+                                            modifier = Modifier
+                                                .size(220.dp)
+                                                .align(Alignment.CenterHorizontally)
+                                                .clip(RoundedCornerShape(12.dp)),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    } else {
+                                        Text(
+                                            text = "二维码加载失败，请重新发布一次",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+
+                                    Spacer(Modifier.height(12.dp))
+                                    Text(
+                                        text = publishUrl ?: "",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1233,7 +1288,7 @@ fun BackendSelectableMediaRow(
                 Text(item.fileName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "图片素材",
+                    if (item.assetType.equals("VIDEO", true)) "视频素材" else "图片素材",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1428,14 +1483,13 @@ private fun normalizePreviewUrl(rawUrl: String?): String? {
 
     return when {
         rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
-            rawUrl.replace("localhost", "10.0.2.2")
-//            rawUrl.replace("localhost", "172.27.188.58")
-
+//            rawUrl.replace("localhost", "10.0.2.2")
+            rawUrl.replace("localhost", "172.27.188.58")
         }
 
         rawUrl.startsWith("/") -> {
-            "http://10.0.2.2:8080$rawUrl"
-//            "http://172.27.188.58:8080$rawUrl"
+//            "http://10.0.2.2:8080$rawUrl"
+            "http://172.27.188.58:8080$rawUrl"
         }
 
         else -> rawUrl
@@ -1626,10 +1680,10 @@ private fun normalizeModelUrl(rawUrl: String?): String? {
         value.startsWith("http://", ignoreCase = true) ||
                 value.startsWith("https://", ignoreCase = true) -> {
             value
-                .replace("localhost", "10.0.2.2")
-                .replace("127.0.0.1", "10.0.2.2")
-//                .replace("localhost", "172.27.188.58")
-//                .replace("127.0.0.1", "172.27.188.58")
+//                .replace("localhost", "10.0.2.2")
+//                .replace("127.0.0.1", "10.0.2.2")
+                .replace("localhost", "172.27.188.58")
+                .replace("127.0.0.1", "172.27.188.58")
         }
 
         value.startsWith("/") -> {
@@ -1708,5 +1762,47 @@ private fun ExplodedImagePreviewDialog(
                 }
             }
         }
+    }
+}
+
+private fun decodeBase64ToImageBitmap(base64Value: String?): ImageBitmap? {
+    return try {
+        if (base64Value.isNullOrBlank()) return null
+
+        val pureBase64 = base64Value.substringAfter("base64,", base64Value)
+        val bytes = Base64.decode(pureBase64, Base64.DEFAULT)
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
+
+private fun decodeQrFromImageUriWithMlKit(
+    context: android.content.Context,
+    uri: Uri,
+    onResult: (String?) -> Unit
+) {
+    try {
+        val image = InputImage.fromFilePath(context, uri)
+
+        val options = com.google.mlkit.vision.barcode.BarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+            .build()
+
+        val scanner = BarcodeScanning.getClient(options)
+
+        scanner.process(image)
+            .addOnSuccessListener { barcodes ->
+                val rawValue = barcodes.firstOrNull()?.rawValue
+                onResult(rawValue)
+            }
+            .addOnFailureListener {
+                it.printStackTrace()
+                onResult(null)
+            }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        onResult(null)
     }
 }

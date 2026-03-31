@@ -6,6 +6,7 @@ import com.example.yunjing.ui.merchant.model.MerchantProjectDetailDto
 import com.example.yunjing.ui.merchant.model.MerchantProjectDto
 import com.example.yunjing.ui.merchant.model.ParseProjectRequest
 import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
+import com.example.yunjing.ui.merchant.model.ProjectResponseDto
 import com.example.yunjing.ui.merchant.model.RebuildRequest
 import com.example.yunjing.ui.merchant.model.RenameProjectRequest
 import com.example.yunjing.ui.merchant.model.UploadMediaResponse
@@ -84,5 +85,15 @@ interface MerchantContentApi {
     suspend fun parseProject(
         @Path("projectId") projectId: Long,
         @Body request: ParseProjectRequest
+    ): ApiResponse<MerchantProjectDetailDto>
+
+    @POST("api/merchant/projects/{projectId}/publish")
+    suspend fun publishProject(
+        @Path("projectId") projectId: Long
+    ): ApiResponse<ProjectResponseDto>
+
+    @GET("api/buyer/projects/{publishCode}")
+    suspend fun getPublishedProject(
+        @Path("publishCode") publishCode: String
     ): ApiResponse<MerchantProjectDetailDto>
 }

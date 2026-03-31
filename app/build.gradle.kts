@@ -84,6 +84,11 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
 
     implementation("io.github.sceneview:sceneview:3.0.0")
+
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 
 
