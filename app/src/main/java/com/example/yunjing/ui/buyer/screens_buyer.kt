@@ -47,6 +47,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -74,6 +76,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -812,13 +815,13 @@ private fun normalizeBuyerPreviewUrl(rawUrl: String?): String? {
 
     return when {
         rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
-            rawUrl.replace("localhost", "10.0.2.2")
-//            rawUrl.replace("localhost", "192.168.31.100")
+//            rawUrl.replace("localhost", "10.0.2.2")
+            rawUrl.replace("localhost", "192.168.31.100")
         }
 
         rawUrl.startsWith("/") -> {
-            "http://10.0.2.2:8080$rawUrl"
-//            "http://192.168.31.100:8080$rawUrl"
+//            "http://10.0.2.2:8080$rawUrl"
+            "http://192.168.31.100:8080$rawUrl"
         }
         else -> rawUrl
     }
@@ -1490,27 +1493,10 @@ private fun BuyerTutorialDetailScreen(
             Spacer(Modifier.height(14.dp))
         }
 
-        SoftCard(modifier = Modifier.fillMaxWidth()) {
-            Column {
-                Text(
-                    text = "移除教程",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "移除后，该项目会从“我的教程”中删除，但不会影响商家端已发布内容。",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(12.dp))
-
-                DangerDeleteButton(
-                    text = "从我的教程中移除",
-                    onClick = onDelete
-                )
-            }
-        }
+        DangerDeleteButton(
+            text = "移除教程",
+            onClick = onDelete
+        )
     }
 
     if (previewExploded && !tutorial.explodedImageUrl.isNullOrBlank()) {
@@ -1697,23 +1683,26 @@ private fun DangerDeleteButton(
     text: String,
     onClick: () -> Unit
 ) {
-    val shape = RoundedCornerShape(18.dp)
-
-    Box(
+    Button(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp)
-            .clip(shape)
-            .background(Color(0xFFD92D20))
-            .pressClick(onClick = onClick),
-        contentAlignment = Alignment.Center
+            .height(50.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFFD92D20),
+            contentColor = Color.White
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp
+        )
     ) {
         Text(
             text = text,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
     }
