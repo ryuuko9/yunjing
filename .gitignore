@@ -24,3 +24,6 @@ unityLibrary/src/main/cpp/
 unityLibrary/src/main/jniLibs/
 unityLibrary/**/il2cpp_cache/
 unityLibrary/**/artifacts/
+/unityLibrary/xrmanifest.androidlib/build/
+app/src/main/res/
+unityLibrary/src/main/res/
