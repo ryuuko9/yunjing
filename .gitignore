@@ -27,3 +27,4 @@ unityLibrary/**/artifacts/
 /app/release/
 app/src/main/res/
 unityLibrary/src/main/res/
+/unityLibrary/xrmanifest.androidlib/build/
