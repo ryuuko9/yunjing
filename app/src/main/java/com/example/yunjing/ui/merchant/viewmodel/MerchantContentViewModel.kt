@@ -41,10 +41,10 @@ class MerchantContentViewModel(
         val selectedParseSourceAssetIds: List<Long> = emptyList(),
         val selectedParseModelIds: List<Long> = emptyList(),
         val parseMode: ParseMode = ParseMode.EXPLODED_GUIDE,
-        val isFakeRebuilding: Boolean = false,
+        val isRealRebuilding: Boolean = false,
         val rebuildProgress: Float = 0f,
-        val fakeRebuildResult: String? = null,
-        val isFakeParsing: Boolean = false,
+        val realRebuildResult: String? = null,
+        val realParsing: Boolean = false,
         val parseProgress: Float = 0f,
     )
 
@@ -100,10 +100,6 @@ class MerchantContentViewModel(
         } else {
             pendingLocalPreviewQueue[projectId] = remaining.toMutableList()
         }
-    }
-
-    fun bindLocalPreviewUri(assetId: Long, uri: Uri) {
-        localPreviewUriMap[assetId] = uri
     }
 
     fun openProjectFromDashboard(projectId: Long) {
@@ -300,7 +296,6 @@ class MerchantContentViewModel(
             isLoading = true
             errorMessage = null
 
-            // 假设 repository 已补充 deleteProject(projectId)
             repository.deleteProject(projectId)
                 .onSuccess {
                     projects.removeAll { it.id == projectId }
@@ -352,13 +347,13 @@ class MerchantContentViewModel(
             !project?.explodedImageUrl.isNullOrBlank() ||
                     !project?.tutorialVideoUrl.isNullOrBlank() -> LibraryStage.READY
 
-            runtime.isFakeParsing -> LibraryStage.PENDING_PARSE
+            runtime.realParsing -> LibraryStage.PENDING_PARSE
 
-            runtime.isFakeRebuilding -> LibraryStage.PENDING_REBUILD
+            runtime.isRealRebuilding -> LibraryStage.PENDING_REBUILD
 
             imageCount == 0 -> LibraryStage.PENDING_UPLOAD
 
-            modelCount == 0 && runtime.fakeRebuildResult == null -> LibraryStage.PENDING_REBUILD
+            modelCount == 0 && runtime.realRebuildResult == null -> LibraryStage.PENDING_REBUILD
 
             else -> LibraryStage.PENDING_PARSE
         }
@@ -372,10 +367,6 @@ class MerchantContentViewModel(
             LibraryStage.READY -> "待发布"
             LibraryStage.PUBLISHED -> "已发布"
         }
-    }
-
-    fun refreshCurrentProject() {
-        selectedProjectId?.let { loadProjectDetail(it) }
     }
 
     fun loadProjectDetail(projectId: Long) {
@@ -549,7 +540,7 @@ class MerchantContentViewModel(
         runtimeStates.remove(projectId)
     }
 
-    fun toggleFakeRebuildAsset(projectId: Long, assetId: Long) {
+    fun toggleRebuildAsset(projectId: Long, assetId: Long) {
         updateRuntimeState(projectId) { state ->
             val next = state.selectedRebuildAssetIds.toMutableList()
             if (next.contains(assetId)) next.remove(assetId) else next.add(assetId)
@@ -557,31 +548,31 @@ class MerchantContentViewModel(
         }
     }
 
-    fun clearFakeRebuildSelection(projectId: Long) {
+    fun clearRebuildSelection(projectId: Long) {
         updateRuntimeState(projectId) {
             it.copy(selectedRebuildAssetIds = emptyList())
         }
     }
 
-    fun startFakeRebuild(projectId: Long) {
+    fun startRebuild(projectId: Long) {
         updateRuntimeState(projectId) {
             it.copy(
-                isFakeRebuilding = true,
+                isRealRebuilding = true,
                 rebuildProgress = 0f,
-                fakeRebuildResult = null
+                realRebuildResult = null
             )
         }
     }
 
-    fun finishFakeRebuild(projectId: Long) {
+    fun finishRebuild(projectId: Long) {
         val selectedAssetIds = runtimeStateOf(projectId).selectedRebuildAssetIds
 
         if (selectedAssetIds.isEmpty()) {
             updateRuntimeState(projectId) { state ->
                 state.copy(
-                    isFakeRebuilding = false,
+                    isRealRebuilding = false,
                     rebuildProgress = 0f,
-                    fakeRebuildResult = null
+                    realRebuildResult = null
                 )
             }
             errorMessage = "请先选择重建素材"
@@ -610,9 +601,9 @@ class MerchantContentViewModel(
 
                 updateRuntimeState(projectId) { state ->
                     state.copy(
-                        isFakeRebuilding = false,
+                        isRealRebuilding = false,
                         rebuildProgress = 1f,
-                        fakeRebuildResult = if (models.isEmpty()) {
+                        realRebuildResult = if (models.isEmpty()) {
                             "重建已完成，但后端暂未返回模型文件。"
                         } else {
                             "已完成模型重建，模型文件已归档到模型文件夹。"
@@ -628,15 +619,15 @@ class MerchantContentViewModel(
                     )
                 }
 
-                // 关键：无论返回体是否完整，都强制刷新一次详情和模型列表
+                // 刷新一次详情和模型列表
                 loadProjectDetail(projectId)
                 loadModels(projectId)
             }.onFailure { error ->
                 updateRuntimeState(projectId) { state ->
                     state.copy(
-                        isFakeRebuilding = false,
+                        isRealRebuilding = false,
                         rebuildProgress = 0f,
-                        fakeRebuildResult = null
+                        realRebuildResult = null
                     )
                 }
                 errorMessage = error.message ?: "模型重建失败"
@@ -656,7 +647,7 @@ class MerchantContentViewModel(
         }
     }
 
-    fun toggleFakeParseMode(projectId: Long) {
+    fun toggleParseMode(projectId: Long) {
         updateRuntimeState(projectId) {
             it.copy(
                 parseMode = if (it.parseMode == ParseMode.EXPLODED_GUIDE) {
@@ -666,13 +657,13 @@ class MerchantContentViewModel(
                 },
                 selectedParseSourceAssetIds = emptyList(),
                 selectedParseModelIds = emptyList(),
-                isFakeParsing = false,
+                realParsing = false,
                 parseProgress = 0f
             )
         }
     }
 
-    fun toggleFakeParseModel(projectId: Long, modelId: Long) {
+    fun toggleParseModel(projectId: Long, modelId: Long) {
         updateRuntimeState(projectId) { state ->
             val next = state.selectedParseModelIds.toMutableList()
             if (next.contains(modelId)) next.remove(modelId) else next.add(modelId)
@@ -680,7 +671,7 @@ class MerchantContentViewModel(
         }
     }
 
-    fun toggleFakeParseAsset(projectId: Long, assetId: Long) {
+    fun toggleParseAsset(projectId: Long, assetId: Long) {
         updateRuntimeState(projectId) { state ->
             val next = state.selectedParseSourceAssetIds.toMutableList()
             if (next.contains(assetId)) next.remove(assetId) else next.add(assetId)
@@ -688,27 +679,27 @@ class MerchantContentViewModel(
         }
     }
 
-    fun clearFakeParseSelection(projectId: Long) {
+    fun clearParseSelection(projectId: Long) {
         updateRuntimeState(projectId) {
             it.copy(
                 selectedParseSourceAssetIds = emptyList(),
                 selectedParseModelIds = emptyList(),
-                isFakeParsing = false,
+                realParsing = false,
                 parseProgress = 0f
             )
         }
     }
 
-    fun startFakeParse(projectId: Long) {
+    fun startParse(projectId: Long) {
         updateRuntimeState(projectId) {
             it.copy(
-                isFakeParsing = true,
+                realParsing = true,
                 parseProgress = 0f
             )
         }
     }
 
-    fun finishFakeParse(projectId: Long) {
+    fun finishParse(projectId: Long) {
         val state = runtimeStateOf(projectId)
 
         viewModelScope.launch {
@@ -737,7 +728,7 @@ class MerchantContentViewModel(
 
                 updateRuntimeState(projectId) {
                     it.copy(
-                        isFakeParsing = false,
+                        realParsing = false,
                         parseProgress = 1f
                     )
                 }
@@ -746,7 +737,7 @@ class MerchantContentViewModel(
             }.onFailure { error ->
                 updateRuntimeState(projectId) {
                     it.copy(
-                        isFakeParsing = false,
+                        realParsing = false,
                         parseProgress = 0f
                     )
                 }
@@ -754,19 +745,6 @@ class MerchantContentViewModel(
             }
 
             isLoading = false
-        }
-    }
-
-    fun markFakePublish(projectId: Long) {
-        updateRuntimeState(projectId) {
-            it.copy(publishStatus = "已发布")
-        }
-
-        updateProjectInList(projectId) { project ->
-            project.copy(
-                publishStatus = "PUBLISHED",
-                status = "PUBLISHED"
-            )
         }
     }
 

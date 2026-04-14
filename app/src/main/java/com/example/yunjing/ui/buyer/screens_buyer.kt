@@ -1,13 +1,8 @@
 package com.example.yunjing.ui.buyer
 
 import android.content.ActivityNotFoundException
-import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.ImageDecoder
 import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -105,10 +100,6 @@ import com.example.yunjing.ui.pressClick
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
-import com.google.zxing.BinaryBitmap
-import com.google.zxing.MultiFormatReader
-import com.google.zxing.RGBLuminanceSource
-import com.google.zxing.common.HybridBinarizer
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlin.math.max
@@ -291,6 +282,7 @@ fun BuyerMainShell(
         }
     }
 }
+
 @Composable
 private fun BuyerTabNavHost(
     nav: NavHostController,
@@ -348,7 +340,7 @@ private fun BuyerTabNavHost(
 
         composable(BUYER_AI_PICK) {
             BuyerAiVideoSelectScreen(
-                videos = buyerAiMockVideos(),
+                videos = buyerAiDemoVideos(),
                 onBack = { nav.popBackStack() },
                 onSelectVideo = { video ->
                     nav.navigate("$BUYER_AI_CALL/${video.id}")
@@ -365,7 +357,7 @@ private fun BuyerTabNavHost(
             )
         ) { backStackEntry ->
             val videoId = backStackEntry.arguments?.getString(BUYER_AI_CALL_ARG)
-            val video = buyerAiMockVideos().firstOrNull { it.id == videoId }
+            val video = buyerAiDemoVideos().firstOrNull { it.id == videoId }
 
             if (video != null) {
                 BuyerAiCallScreen(
@@ -377,7 +369,7 @@ private fun BuyerTabNavHost(
                 )
             } else {
                 BuyerAiVideoSelectScreen(
-                    videos = buyerAiMockVideos(),
+                    videos = buyerAiDemoVideos(),
                     onBack = { nav.popBackStack() },
                     onSelectVideo = { selected ->
                         nav.navigate("$BUYER_AI_CALL/${selected.id}")
@@ -396,9 +388,9 @@ private fun BuyerTabNavHost(
     }
 }
 
-/* ---------------------------
-   Tab 定义 & 底部栏
----------------------------- */
+/**
+ * Tab 定义 & 底部栏
+ */
 
 private data class BuyerTab(
     val route: String,
@@ -517,11 +509,10 @@ private fun BuyerBottomBarItem(
     }
 }
 
-/* ---------------------------
-   买家首页
----------------------------- */
+/**
+ * 买家首页
+ */
 
-private const val BUYER_TUTORIAL_DETAIL = "buyer_tutorial_detail"
 private const val BUYER_AI_PICK = "buyer_ai_pick"
 private const val BUYER_AI_CALL = "buyer_ai_call"
 private const val BUYER_AI_CALL_ARG = "videoId"
@@ -550,11 +541,6 @@ private data class BuyerTutorialUi(
     val addedAtText: String
 )
 
-private data class RecentItem(
-    val tutorialId: Long,
-    val title: String,
-    val subtitle: String
-)
 @Composable
 private fun BuyerHomeScreen(
     onPrimaryScan: () -> Unit,
@@ -748,9 +734,9 @@ private fun RecentRow(
     }
 }
 
-/* ---------------------------
-   其他 Tab（先给占位，后续再接真实功能）
----------------------------- */
+/**
+ * 其他 Tab
+ */
 
 @Composable
 private fun BuyerTutorialScreen(
@@ -843,27 +829,6 @@ private fun BuyerTutorialScreen(
         }
     }
 }
-private fun openBuyerUnityPlayer(
-    context: Context,
-    tutorial: BuyerTutorialUi
-) {
-    try {
-        val intent = Intent(context, PickerUnityActivity::class.java).apply {
-            putExtra("publishCode", tutorial.publishCode)
-            putExtra("tutorialVideoUrl", tutorial.tutorialVideoUrl)
-            putExtra("tutorialTitle", tutorial.tutorialTitle)
-        }
-        context.startActivity(intent)
-    } catch (_: ActivityNotFoundException) {
-        Toast.makeText(context, "未找到 Unity 页面", Toast.LENGTH_SHORT).show()
-    } catch (e: Exception) {
-        Toast.makeText(
-            context,
-            "打开 Unity 失败：${e.message ?: "未知错误"}",
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-}
 
 private fun normalizeBuyerPreviewUrl(rawUrl: String?): String? {
     if (rawUrl.isNullOrBlank()) return null
@@ -871,12 +836,12 @@ private fun normalizeBuyerPreviewUrl(rawUrl: String?): String? {
     return when {
         rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
 //            rawUrl.replace("localhost", "10.0.2.2")
-            rawUrl.replace("localhost", "192.168.31.100")
+            rawUrl.replace("localhost", "172.20.10.3")
         }
 
         rawUrl.startsWith("/") -> {
 //            "http://10.0.2.2:8080$rawUrl"
-            "http://192.168.31.100:8080$rawUrl"
+            "http://172.20.10.3:8080$rawUrl"
         }
         else -> rawUrl
     }
@@ -1221,9 +1186,9 @@ private fun SimplePlaceholderPage(
     }
 }
 
-/* ---------------------------
-   iOS 风基础组件：背景 / 卡片 / 按钮
----------------------------- */
+/**
+ * 基础组件：背景 / 卡片 / 按钮
+ */
 
 @Composable
 private fun Modifier.buyerSoftBackground(): Modifier {
@@ -1306,7 +1271,6 @@ private fun BuyerAvatar(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // 先占位：后续接真实头像/Logo，只需要换这里
         Text(
             text = "云",
             fontSize = 28.sp,
@@ -1328,16 +1292,14 @@ private fun ProfileEntryCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            // Surface 本身会按 shape 裁切与绘制，不需要再额外 clip 一次
             .pressClick(onClick = onClick)
-            // 用“轻描边”替代阴影
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                 shape = shape
             ),
-        tonalElevation = 0.dp,   // 关掉 tonal（避免表面色调变化）
-        shadowElevation = 0.dp,  // 关键：关掉阴影
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
         color = MaterialTheme.colorScheme.surface,
         shape = shape
     ) {
@@ -1389,7 +1351,7 @@ private fun ProfileActionRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.primary) // 蓝色背景，可根据需要自定义颜色
+            .background(MaterialTheme.colorScheme.primary) // 可自定义颜色
             .pressClick(onClick = onClick) // 保留原有点击效果
             .padding(horizontal = 14.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center // 内容居中
@@ -1601,107 +1563,6 @@ private fun BuyerTutorialDto.toBuyerTutorialUi(): BuyerTutorialUi {
         publishUrl = publishUrl,
         addedAtText = addedAt ?: "刚刚导入"
     )
-}
-
-private fun loadBitmapFromUri(context: android.content.Context, uri: Uri): Bitmap? {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-        val source = ImageDecoder.createSource(context.contentResolver, uri)
-        ImageDecoder.decodeBitmap(source)
-    } else {
-        @Suppress("DEPRECATION")
-        MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
-    }
-}
-
-private fun decodeQrFromBitmap(bitmap: Bitmap): String? {
-    val candidates = buildBitmapCandidates(bitmap)
-
-    for (candidate in candidates) {
-        val text = tryDecodeBitmap(candidate)
-        if (!text.isNullOrBlank()) {
-            return text
-        }
-    }
-    return null
-}
-
-private fun tryDecodeBitmap(bitmap: Bitmap): String? {
-    val width = bitmap.width
-    val height = bitmap.height
-    val pixels = IntArray(width * height)
-    bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-
-    return try {
-        val source = RGBLuminanceSource(width, height, pixels)
-        val binaryBitmap = BinaryBitmap(HybridBinarizer(source))
-
-        val hints = mapOf(
-            com.google.zxing.DecodeHintType.TRY_HARDER to true,
-            com.google.zxing.DecodeHintType.POSSIBLE_FORMATS to listOf(
-                com.google.zxing.BarcodeFormat.QR_CODE
-            )
-        )
-
-        MultiFormatReader().decode(binaryBitmap, hints).text
-    } catch (e: Exception) {
-        null
-    }
-}
-
-private fun buildBitmapCandidates(src: Bitmap): List<Bitmap> {
-    val result = mutableListOf<Bitmap>()
-    result.add(src)
-
-    // 中心裁剪：二维码通常在截图中间区域
-    val centerCrop = cropCenter(src, 0.7f)
-    if (centerCrop != null) result.add(centerCrop)
-
-    val tighterCenterCrop = cropCenter(src, 0.5f)
-    if (tighterCenterCrop != null) result.add(tighterCenterCrop)
-
-    // 旋转重试
-    val baseList = result.toList()
-    for (bmp in baseList) {
-        result.add(rotateBitmap(bmp, 90f))
-        result.add(rotateBitmap(bmp, 180f))
-        result.add(rotateBitmap(bmp, 270f))
-    }
-
-    return result
-}
-
-private fun cropCenter(src: Bitmap, ratio: Float): Bitmap? {
-    if (ratio <= 0f || ratio > 1f) return null
-
-    val cropWidth = (src.width * ratio).toInt()
-    val cropHeight = (src.height * ratio).toInt()
-    if (cropWidth <= 0 || cropHeight <= 0) return null
-
-    val left = (src.width - cropWidth) / 2
-    val top = (src.height - cropHeight) / 2
-
-    return try {
-        Bitmap.createBitmap(src, left, top, cropWidth, cropHeight)
-    } catch (e: Exception) {
-        null
-    }
-}
-
-private fun rotateBitmap(src: Bitmap, degrees: Float): Bitmap {
-    val matrix = android.graphics.Matrix().apply {
-        postRotate(degrees)
-    }
-    return Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
-}
-
-private fun decodeQrFromImageUri(context: android.content.Context, uri: Uri): String? {
-    return try {
-        val bitmap = loadBitmapFromUri(context, uri) ?: return null
-        decodeQrFromBitmap(bitmap)
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null
-    }
 }
 
 private fun decodeQrFromImageUriWithMlKit(

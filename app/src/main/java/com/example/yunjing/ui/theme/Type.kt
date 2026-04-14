@@ -10,11 +10,11 @@ import com.example.yunjing.R
 
 private val PingFangSC = FontFamily(
     Font(R.font.pingfang_sc_ultralight, FontWeight.ExtraLight), // 200
-    Font(R.font.pingfang_sc_thin, FontWeight.Thin),             // 100
-    Font(R.font.pingfang_sc_light, FontWeight.Light),           // 300
-    Font(R.font.pingfang_sc_regular, FontWeight.Normal),        // 400
-    Font(R.font.pingfang_sc_medium, FontWeight.Medium),         // 500
-    Font(R.font.pingfang_sc_semibold, FontWeight.SemiBold),     // 600
+    Font(R.font.pingfang_sc_thin, FontWeight.Thin),                      // 100
+    Font(R.font.pingfang_sc_light, FontWeight.Light),                    // 300
+    Font(R.font.pingfang_sc_regular, FontWeight.Normal),                 // 400
+    Font(R.font.pingfang_sc_medium, FontWeight.Medium),                  // 500
+    Font(R.font.pingfang_sc_semibold, FontWeight.SemiBold),              // 600
 )
 
 val Typography = Typography(

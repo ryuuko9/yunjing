@@ -63,28 +63,28 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.example.yunjing.R
 
-data class BuyerAiMockVideo(
+data class BuyerAiDemoVideo(
     val id: String,
     val title: String,
     val desc: String,
     @RawRes val resId: Int
 )
 
-fun buyerAiMockVideos(): List<BuyerAiMockVideo> {
+fun buyerAiDemoVideos(): List<BuyerAiDemoVideo> {
     return listOf(
-        BuyerAiMockVideo(
+        BuyerAiDemoVideo(
             id = "demo_1",
             title = "",
             desc = "安装过程演示",
             resId = R.raw.buyer_ai_demo_1
         ),
-        BuyerAiMockVideo(
+        BuyerAiDemoVideo(
             id = "demo_2",
             title = "",
             desc = "安装过程演示",
             resId = R.raw.buyer_ai_demo_2
         ),
-        BuyerAiMockVideo(
+        BuyerAiDemoVideo(
             id = "demo_3",
             title = "",
             desc = "安装过程演示",
@@ -123,7 +123,7 @@ fun BuyerAiRemoteAssistHome(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "接入 AI 协助、接入人工协助",
+            text = "接入会话、查看 AI 步骤、发送标注",
             fontSize = 14.sp,
             color = Color(0xFF667085)
         )
@@ -149,7 +149,7 @@ fun BuyerAiRemoteAssistHome(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "建议：先接入 AI 辅助，不行再进行人工求助，效率最高",
+                    text = "建议：先接入 AI 已筛选人工求助，效率最高",
                     fontSize = 13.sp,
                     color = Color(0xFF6B7280)
                 )
@@ -186,9 +186,9 @@ fun BuyerAiRemoteAssistHome(
 
 @Composable
 fun BuyerAiVideoSelectScreen(
-    videos: List<BuyerAiMockVideo>,
+    videos: List<BuyerAiDemoVideo>,
     onBack: () -> Unit,
-    onSelectVideo: (BuyerAiMockVideo) -> Unit
+    onSelectVideo: (BuyerAiDemoVideo) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -259,7 +259,7 @@ fun BuyerAiVideoSelectScreen(
 
 @Composable
 private fun BuyerAiVideoCard(
-    video: BuyerAiMockVideo,
+    video: BuyerAiDemoVideo,
     onClick: () -> Unit
 ) {
     Card(
@@ -310,7 +310,7 @@ private fun BuyerAiVideoCard(
 
 @Composable
 fun BuyerAiCallScreen(
-    video: BuyerAiMockVideo,
+    video: BuyerAiDemoVideo,
     onExit: () -> Unit,
     onTransferHuman: () -> Unit
 ) {

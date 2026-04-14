@@ -72,24 +72,6 @@ class BuyerTutorialViewModel(
         }
     }
 
-    fun loadTutorialDetail(tutorialId: Long, buyerUserId: Long) {
-        viewModelScope.launch {
-            isLoading = true
-            runCatching {
-                repository.getTutorialDetail(tutorialId, buyerUserId)
-            }.onSuccess { response ->
-                if (response.success && response.data != null) {
-                    selectedTutorial = response.data
-                } else {
-                    errorMessage = response.message.ifBlank { "加载教程详情失败" }
-                }
-            }.onFailure {
-                errorMessage = it.message ?: "加载教程详情失败"
-            }
-            isLoading = false
-        }
-    }
-
     fun deleteTutorial(
         tutorialId: Long,
         buyerUserId: Long,

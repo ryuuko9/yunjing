@@ -76,8 +76,8 @@ interface MerchantContentApi {
         @Path("projectId") projectId: Long
     ): Response<ApiResponse<List<ProjectModelAssetDto>>>
 
-    @POST("api/merchant/projects/{projectId}/fake-rebuild")
-    suspend fun Rebuild(
+    @POST("api/merchant/projects/{projectId}/real-rebuild")
+    suspend fun rebuild(
         @Path("projectId") projectId: Long
     ): ApiResponse<Unit>
 
@@ -96,4 +96,5 @@ interface MerchantContentApi {
     suspend fun getPublishedProject(
         @Path("publishCode") publishCode: String
     ): ApiResponse<MerchantProjectDetailDto>
+
 }

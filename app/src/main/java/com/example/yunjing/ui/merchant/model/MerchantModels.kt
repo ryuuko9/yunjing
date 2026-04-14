@@ -3,9 +3,9 @@ package com.example.yunjing.ui.merchant.model
 import android.net.Uri
 import androidx.compose.ui.graphics.vector.ImageVector
 
-// ----------------------------
-// UI models
-// ----------------------------
+/**
+ * UI models
+ */
 
 data class MerchantTab(
     val route: String,

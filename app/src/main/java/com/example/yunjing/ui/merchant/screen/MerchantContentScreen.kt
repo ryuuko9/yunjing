@@ -49,6 +49,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -102,17 +103,6 @@ import io.github.sceneview.rememberEnvironmentLoader
 import io.github.sceneview.rememberModelLoader
 import kotlinx.coroutines.delay
 
-/**
- * 这是“旧版 UI + 后端项目数据”的合并版本。
- *
- * 设计原则：
- * 1. 项目列表 / 项目详情 / 素材文件夹 / 重建选择 / 解析选择，恢复旧版页面节奏。
- * 2. 项目基础数据全部来自后端。
- * 3. 重建、解析、进度条、结果持久化走 ViewModel 中的本地运行态，不污染后端表结构。
- * 4. 重命名、删除项目改为真实后端接口。
- *
- * 要求 ViewModel 补充的方法见文件底部注释。
- */
 @Composable
 fun MerchantContentScreen(
     viewModel: MerchantContentViewModel,
@@ -146,7 +136,6 @@ fun MerchantContentScreen(
 
     val showCreateProjectDialog = viewModel.showCreateProjectDialog
     val showRenameProjectDialog = viewModel.showRenameProjectDialog
-    val showDeleteProjectDialog = viewModel.showDeleteProjectDialog
     val showEntrySheet = viewModel.showEntrySheet
 
     var previewMedia by remember { mutableStateOf<Pair<ProjectMediaAssetDto, Uri?>?>(null) }
@@ -284,10 +273,10 @@ fun MerchantContentScreen(
         }
     }
 
-    LaunchedEffect(currentProject?.id, runtime?.isFakeRebuilding) {
+    LaunchedEffect(currentProject?.id, runtime?.isRealRebuilding) {
         val projectId = currentProject?.id ?: return@LaunchedEffect
         val state = runtime ?: return@LaunchedEffect
-        if (!state.isFakeRebuilding) return@LaunchedEffect
+        if (!state.isRealRebuilding) return@LaunchedEffect
 
         val progressPoints = listOf(
             0.08f, 0.18f, 0.30f, 0.42f, 0.53f,
@@ -310,14 +299,14 @@ fun MerchantContentScreen(
             }
         }
 
-        viewModel.finishFakeRebuild(projectId)
+        viewModel.finishRebuild(projectId)
         Toast.makeText(context, "重建完成", Toast.LENGTH_SHORT).show()
     }
 
-    LaunchedEffect(currentProject?.id, runtime?.isFakeParsing) {
+    LaunchedEffect(currentProject?.id, runtime?.realParsing) {
         val projectId = currentProject?.id ?: return@LaunchedEffect
         val state = runtime ?: return@LaunchedEffect
-        if (!state.isFakeParsing) return@LaunchedEffect
+        if (!state.realParsing) return@LaunchedEffect
 
         val progressPoints = listOf(
             0.08f, 0.18f, 0.30f, 0.42f, 0.53f,
@@ -340,7 +329,7 @@ fun MerchantContentScreen(
             }
         }
 
-        viewModel.finishFakeParse(projectId)
+        viewModel.finishParse(projectId)
         Toast.makeText(context, "解析完成", Toast.LENGTH_SHORT).show()
     }
 
@@ -529,7 +518,7 @@ fun MerchantContentScreen(
                                     MiniChip(
                                         text = "清空选择",
                                         icon = Icons.Filled.ClearAll,
-                                        onClick = { viewModel.clearFakeRebuildSelection(currentProject.id) },
+                                        onClick = { viewModel.clearRebuildSelection(currentProject.id) },
                                         modifier = Modifier.weight(1f)
                                     )
                                     MiniChip(
@@ -538,8 +527,8 @@ fun MerchantContentScreen(
                                         onClick = {
                                             if (runtime.selectedRebuildAssetIds.isEmpty()) {
                                                 Toast.makeText(context, "请先选择图片素材后再开始重建", Toast.LENGTH_SHORT).show()
-                                            } else if (!runtime.isFakeRebuilding) {
-                                                viewModel.startFakeRebuild(currentProject.id)
+                                            } else if (!runtime.isRealRebuilding) {
+                                                viewModel.startRebuild(currentProject.id)
                                             }
                                         },
                                         modifier = Modifier.weight(1f)
@@ -547,7 +536,7 @@ fun MerchantContentScreen(
                                 }
                             }
 
-                            if (runtime.isFakeRebuilding) {
+                            if (runtime.isRealRebuilding) {
                                 Spacer(Modifier.height(12.dp))
                                 ProgressBlock(
                                     title = "3D 重建中",
@@ -556,14 +545,14 @@ fun MerchantContentScreen(
                                 )
                             }
 
-                            if (runtime.fakeRebuildResult != null) {
+                            if (runtime.realRebuildResult != null) {
                                 Spacer(Modifier.height(12.dp))
                                 SoftCard(modifier = Modifier.fillMaxWidth()) {
                                     Column(modifier = Modifier.fillMaxWidth()) {
                                         Text("重建结果", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                                         Spacer(Modifier.height(8.dp))
                                         Text(
-                                            runtime.fakeRebuildResult,
+                                            runtime.realRebuildResult,
                                             fontSize = 12.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -587,7 +576,7 @@ fun MerchantContentScreen(
                                 MiniChip(
                                     text = if (runtime.parseMode == ParseMode.EXPLODED_GUIDE) "切到视频教程解析" else "切到爆炸图解析",
                                     icon = Icons.Filled.Description,
-                                    onClick = { viewModel.toggleFakeParseMode(currentProject.id) }
+                                    onClick = { viewModel.toggleParseMode(currentProject.id) }
                                 )
                             }
                         ) {
@@ -657,7 +646,7 @@ fun MerchantContentScreen(
                                 MiniChip(
                                     text = "清空解析选择",
                                     icon = Icons.Filled.ClearAll,
-                                    onClick = { viewModel.clearFakeParseSelection(currentProject.id) },
+                                    onClick = { viewModel.clearParseSelection(currentProject.id) },
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -679,13 +668,13 @@ fun MerchantContentScreen(
                                             "请至少选择一个模型文件",
                                             Toast.LENGTH_SHORT
                                         ).show()
-                                    } else if (!runtime.isFakeParsing) {
-                                        viewModel.startFakeParse(currentProject.id)
+                                    } else if (!runtime.realParsing) {
+                                        viewModel.startParse(currentProject.id)
                                     }
                                 }
                             )
 
-                            if (runtime.isFakeParsing) {
+                            if (runtime.realParsing) {
                                 Spacer(Modifier.height(12.dp))
                                 ProgressBlock(
                                     title = "内容解析中",
@@ -820,7 +809,7 @@ fun MerchantContentScreen(
         }
 
         ContentPageState.MODEL_FOLDER_MANAGE -> {
-            if (currentProject == null || runtime == null) {
+            if (currentProject == null) {
                 viewModel.selectedProjectId = null
                 viewModel.pageState = ContentPageState.PROJECT_LIST
             } else {
@@ -972,7 +961,7 @@ fun MerchantContentScreen(
                         BackendSelectableMediaRow(
                             item = item,
                             selected = runtime.selectedRebuildAssetIds.contains(item.id),
-                            onToggle = { viewModel.toggleFakeRebuildAsset(currentProject.id, item.id) }
+                            onToggle = { viewModel.toggleRebuildAsset(currentProject.id, item.id) }
                         )
                         Spacer(Modifier.height(10.dp))
                     }
@@ -1025,7 +1014,7 @@ fun MerchantContentScreen(
                         BackendSelectableModelRow(
                             item = item,
                             selected = runtime.selectedParseModelIds.contains(item.id),
-                            onToggle = { viewModel.toggleFakeParseModel(currentProject.id, item.id) }
+                            onToggle = { viewModel.toggleParseModel(currentProject.id, item.id) }
                         )
                         Spacer(Modifier.height(10.dp))
                     }
@@ -1078,7 +1067,7 @@ fun MerchantContentScreen(
                         BackendSelectableMediaRow(
                             item = item,
                             selected = runtime.selectedParseSourceAssetIds.contains(item.id),
-                            onToggle = { viewModel.toggleFakeParseAsset(currentProject.id, item.id) }
+                            onToggle = { viewModel.toggleParseAsset(currentProject.id, item.id) }
                         )
                         Spacer(Modifier.height(10.dp))
                     }
@@ -1192,7 +1181,7 @@ fun MerchantContentScreen(
     pendingDeleteMedia?.let { media ->
         DeleteMediaDialog(
             fileName = media.fileName,
-            onDismiss = { pendingDeleteMedia = null },
+            onDismiss = { },
             onConfirm = {
                 val projectId = currentProject?.id ?: return@DeleteMediaDialog
                 val mediaId = media.id
@@ -1204,7 +1193,6 @@ fun MerchantContentScreen(
                         if (previewMedia?.first?.id == mediaId) {
                             previewMedia = null
                         }
-                        pendingDeleteMedia = null
                         Toast.makeText(context, "素材已删除", Toast.LENGTH_SHORT).show()
                     }
                 )
@@ -1223,7 +1211,7 @@ fun MerchantContentScreen(
     explodedImagePreviewUrl?.let { imageUrl ->
         ExplodedImagePreviewDialog(
             imageUrl = imageUrl,
-            onDismiss = { explodedImagePreviewUrl = null }
+            onDismiss = { }
         )
     }
 }
@@ -1535,12 +1523,12 @@ private fun normalizePreviewUrl(rawUrl: String?): String? {
     return when {
         rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
 //            rawUrl.replace("localhost", "10.0.2.2")
-            rawUrl.replace("localhost", "192.168.31.100")
+            rawUrl.replace("localhost", "172.20.10.3")
         }
 
         rawUrl.startsWith("/") -> {
 //            "http://10.0.2.2:8080$rawUrl"
-            "http://192.168.31.100:8080$rawUrl"
+            "http://172.20.10.3:8080$rawUrl"
         }
 
         else -> rawUrl
@@ -1556,7 +1544,7 @@ private fun ModelPreviewContent(
 
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
-    val environmentLoader = rememberEnvironmentLoader(engine);
+    val environmentLoader = rememberEnvironmentLoader(engine)
 
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/qwantani_dusk_2_puresky_2k.hdr")!!
@@ -1614,7 +1602,7 @@ private fun ModelPreviewContent(
         Spacer(Modifier.height(14.dp))
 
         Text(
-            text = model.modelName?.ifBlank { "模型预览" } ?: "模型预览",
+            text = model.modelName.ifBlank { "模型预览" },
             fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold
         )
@@ -1734,18 +1722,18 @@ private fun normalizeModelUrl(rawUrl: String?): String? {
             value
 //                .replace("localhost", "10.0.2.2")
 //                .replace("127.0.0.1", "10.0.2.2")
-                .replace("localhost", "192.168.31.100")
-                .replace("127.0.0.1", "192.168.31.100")
+                .replace("localhost", "172.20.10.3")
+                .replace("127.0.0.1", "172.20.10.3")
         }
 
         value.startsWith("/") -> {
 //            "http://10.0.2.2:8080$value"
-            "http://192.168.31.100:8080$value"
+            "http://172.20.10.3:8080$value"
         }
 
         else -> {
 //            "http://10.0.2.2:8080$value"
-            "http://192.168.31.100:8080/$value"
+            "http://172.20.10.3:8080/$value"
         }
     }
 }
@@ -1755,9 +1743,9 @@ private fun ExplodedImagePreviewDialog(
     imageUrl: String,
     onDismiss: () -> Unit
 ) {
-    var scale by remember { mutableStateOf(1f) }
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var offsetY by remember { mutableFloatStateOf(0f) }
 
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
         val newScale = (scale * zoomChange).coerceIn(1f, 5f)

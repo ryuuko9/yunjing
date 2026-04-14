@@ -121,7 +121,7 @@ class MerchantContentRepository(
                 )
 
                 val body = unwrapBody(response, "上传素材失败")
-                body.asset ?: throw IllegalStateException("上传素材失败")
+                body.asset
             } finally {
                 if (file.exists()) {
                     file.delete()
@@ -143,9 +143,9 @@ class MerchantContentRepository(
         }
     }
 
-    suspend fun Rebuild(projectId: Long): Result<Unit> {
+    suspend fun rebuild(projectId: Long): Result<Unit> {
         return runCatching {
-            val resp = api.Rebuild(projectId)
+            val resp = api.rebuild(projectId)
             if (!resp.success) {
                 throw IllegalStateException(resp.message.ifBlank { "模型重建失败" })
             }
@@ -201,7 +201,7 @@ class MerchantContentRepository(
             } else {
                 Result.failure(
                     IllegalStateException(
-                        if (response.message.isNotBlank()) response.message else "删除素材失败"
+                        response.message.ifBlank { "删除素材失败" }
                     )
                 )
             }

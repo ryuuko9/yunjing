@@ -12,10 +12,6 @@ class BuyerTutorialRepository(
         return api.listTutorials(buyerUserId)
     }
 
-    suspend fun getTutorialDetail(tutorialId: Long, buyerUserId: Long): ApiResponse<BuyerTutorialDto> {
-        return api.getTutorialDetail(tutorialId, buyerUserId)
-    }
-
     suspend fun importTutorial(
         publishCode: String,
         buyerUserId: Long

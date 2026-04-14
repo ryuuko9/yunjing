@@ -3,12 +3,21 @@ package com.example.yunjing.nav
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
-import androidx.navigation.compose.*
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.yunjing.data.AuthStore
 import com.example.yunjing.data.RetrofitClient
@@ -16,11 +25,11 @@ import com.example.yunjing.data.RoleStore
 import com.example.yunjing.data.SessionState
 import com.example.yunjing.data.UserRole
 import com.example.yunjing.ui.AuthScreen
-import com.example.yunjing.ui.buyer.BuyerMainShell
-import com.example.yunjing.ui.merchant.MerchantMainShell
 import com.example.yunjing.ui.RoleSelectScreen
+import com.example.yunjing.ui.buyer.BuyerMainShell
 import com.example.yunjing.ui.buyer.repository.BuyerTutorialRepository
 import com.example.yunjing.ui.buyer.viewmodel.BuyerTutorialViewModel
+import com.example.yunjing.ui.merchant.MerchantMainShell
 import kotlinx.coroutines.launch
 
 @Composable
@@ -71,7 +80,7 @@ fun AppNav() {
             }
         }
 
-        // 1) 角色选择页：这里直接去 AUTH
+        // 1) 角色选择页：这里去 AUTH
         composable(Destinations.ROLE) {
             RoleSelectScreen(
                 onPickBuyer = {
@@ -93,7 +102,7 @@ fun AppNav() {
             )
         }
 
-        // 2) 登录/注册页：登录成功统一回 Gate
+        // 2) 登录/注册页：登录成功回 Gate
         composable(
             route = Destinations.AUTH_ROUTE,
             arguments = listOf(navArgument(Destinations.ARG_ROLE) { type = NavType.StringType })
@@ -112,7 +121,7 @@ fun AppNav() {
             )
         }
 
-        // 3) 买家主界面（退出/切换统一回 Gate）
+        // 3) 买家主界面（退出/切换回 Gate）
         composable(Destinations.BUYER_MAIN) {
             val buyerTutorialViewModel = remember {
                 BuyerTutorialViewModel(
@@ -145,7 +154,7 @@ fun AppNav() {
             )
         }
 
-        // 4) 商家主界面（退出/切换统一回 Gate）
+        // 4) 商家主界面（退出/切换回 Gate）
         composable(Destinations.MERCHANT_MAIN) {
             MerchantMainShell(
                 onSwitchRole = {

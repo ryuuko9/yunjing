@@ -67,7 +67,7 @@ public class OculusUnity implements SurfaceHolder.Callback
 
     public static void loadLibrary(String name) {
         Log.d("Unity", "loading library " + name);
-        System.loadLibrary(name);
+        java.lang.System.loadLibrary(name);
     }
 
     public static boolean getManifestSetting(String boolName) {
@@ -101,7 +101,7 @@ public class OculusUnity implements SurfaceHolder.Callback
     }
 
     public static boolean getIsOnOculusHardware() {
-        String manufacturer = Build.MANUFACTURER;
+        String manufacturer = android.os.Build.MANUFACTURER;
         return manufacturer.toLowerCase(Locale.ENGLISH).contains("oculus");
     }
 
