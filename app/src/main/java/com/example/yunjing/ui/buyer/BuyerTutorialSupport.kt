@@ -2,7 +2,6 @@ package com.example.yunjing.ui.buyer
 
 import android.content.ActivityNotFoundException
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -34,9 +33,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
-import com.demo.picker.PickerUnityActivity
 import com.example.yunjing.ui.buyer.model.BuyerTutorialDto
 import com.example.yunjing.ui.pressClick
+import com.example.yunjing.ui.unity.canOpenUnityPlayer
+import com.example.yunjing.ui.unity.createUnityPlayerIntent
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
@@ -305,10 +305,14 @@ internal fun Context.showShortToast(message: String) {
  */
 internal fun Context.openBuyerTutorialPlayer(tutorial: BuyerTutorialUi) {
     try {
-        val intent = Intent(this, PickerUnityActivity::class.java).apply {
-            putExtra("publishCode", tutorial.publishCode)
-            putExtra("tutorialVideoUrl", tutorial.tutorialVideoUrl)
-            putExtra("tutorialTitle", tutorial.tutorialTitle)
+        val intent = createUnityPlayerIntent(
+            publishCode = tutorial.publishCode,
+            tutorialVideoUrl = tutorial.tutorialVideoUrl,
+            tutorialTitle = tutorial.tutorialTitle
+        )
+        if (!canOpenUnityPlayer(intent)) {
+            showShortToast("鏈壘鍒?Unity 椤甸潰")
+            return
         }
         startActivity(intent)
     } catch (_: ActivityNotFoundException) {

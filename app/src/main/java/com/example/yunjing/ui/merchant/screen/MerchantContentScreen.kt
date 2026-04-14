@@ -71,7 +71,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.demo.picker.PickerUnityActivity
 import com.example.yunjing.ui.merchant.component.CreateProjectDialog
 import com.example.yunjing.ui.merchant.component.DeleteMediaDialog
 import com.example.yunjing.ui.merchant.component.MaterialFolderCard
@@ -92,6 +91,8 @@ import com.example.yunjing.ui.merchant.util.createImageUri
 import com.example.yunjing.ui.merchant.util.createVideoUri
 import com.example.yunjing.ui.merchant.viewmodel.MerchantContentViewModel
 import com.example.yunjing.ui.pressClick
+import com.example.yunjing.ui.unity.canOpenUnityPlayer
+import com.example.yunjing.ui.unity.createUnityPlayerIntent
 import com.google.android.filament.LightManager
 import io.github.sceneview.Scene
 import io.github.sceneview.math.Position
@@ -258,9 +259,21 @@ fun MerchantContentScreen(
         }
     }
 
-    fun openUnityPlayer() {
+    fun openUnityPlayer(
+        publishCode: String?,
+        tutorialVideoUrl: String?,
+        tutorialTitle: String?
+    ) {
         try {
-            val intent = android.content.Intent(context, PickerUnityActivity::class.java)
+            val intent = context.createUnityPlayerIntent(
+                publishCode = publishCode,
+                tutorialVideoUrl = tutorialVideoUrl,
+                tutorialTitle = tutorialTitle
+            )
+            if (!context.canOpenUnityPlayer(intent)) {
+                Toast.makeText(context, "鏈壘鍒?Unity 椤甸潰", Toast.LENGTH_SHORT).show()
+                return
+            }
             context.startActivity(intent)
         } catch (_: ActivityNotFoundException) {
             Toast.makeText(context, "未找到 Unity 页面", Toast.LENGTH_SHORT).show()
@@ -737,7 +750,13 @@ fun MerchantContentScreen(
                                         Spacer(Modifier.height(12.dp))
                                         PrimaryPillButton(
                                             text = "打开教程播放器",
-                                            onClick = { openUnityPlayer() }
+                                            onClick = {
+                                                openUnityPlayer(
+                                                    publishCode = detailProject?.publishCode,
+                                                    tutorialVideoUrl = tutorialVideoUrl,
+                                                    tutorialTitle = tutorialTitle
+                                                )
+                                            }
                                         )
                                     }
                                 }
@@ -1181,7 +1200,7 @@ fun MerchantContentScreen(
     pendingDeleteMedia?.let { media ->
         DeleteMediaDialog(
             fileName = media.fileName,
-            onDismiss = { },
+            onDismiss = { pendingDeleteMedia = null },
             onConfirm = {
                 val projectId = currentProject?.id ?: return@DeleteMediaDialog
                 val mediaId = media.id
@@ -1211,7 +1230,7 @@ fun MerchantContentScreen(
     explodedImagePreviewUrl?.let { imageUrl ->
         ExplodedImagePreviewDialog(
             imageUrl = imageUrl,
-            onDismiss = { }
+            onDismiss = { explodedImagePreviewUrl = null }
         )
     }
 }
