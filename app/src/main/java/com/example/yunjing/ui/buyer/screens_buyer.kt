@@ -86,17 +86,18 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import com.demo.picker.PickerUnityActivity
 import com.example.yunjing.PortraitCaptureActivity
 import com.example.yunjing.data.AuthStore
 import com.example.yunjing.data.UserRole
 import com.example.yunjing.nav.Destinations
-import com.example.yunjing.ui.BuyerAiAssistScreen
 import com.example.yunjing.ui.ProfileConfirmDialogs
 import com.example.yunjing.ui.buyer.model.BuyerTutorialDto
 import com.example.yunjing.ui.buyer.viewmodel.BuyerTutorialViewModel
@@ -132,6 +133,7 @@ fun BuyerMainShell(
         .accountFlow(UserRole.BUYER)
         .collectAsState(initial = "未登录")
 
+    // 需要修改
     val buyerUserId = 1L
 
     val tutorials = buyerTutorialViewModel.tutorials.map { it.toBuyerTutorialUi() }
@@ -225,6 +227,8 @@ fun BuyerMainShell(
 
     val navBackStackEntry by innerNav.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    val currentRoute = currentDestination?.route
+    val hideBottomBar = currentRoute?.startsWith("$BUYER_AI_CALL/") == true
 
     Box(
         modifier = Modifier
@@ -265,23 +269,25 @@ fun BuyerMainShell(
                 )
             }
 
-            BuyerBottomBar(
-                tabs = tabs,
-                currentDestination = currentDestination,
-                onTabClick = { route ->
-                    if (route == Destinations.BUYER_HOME) {
-                        innerNav.popBackStack(Destinations.BUYER_HOME, inclusive = false)
-                    } else {
-                        innerNav.navigate(route) {
-                            launchSingleTop = true
-                            restoreState = true
-                            popUpTo(Destinations.BUYER_HOME) {
-                                saveState = true
+            if (!hideBottomBar) {
+                BuyerBottomBar(
+                    tabs = tabs,
+                    currentDestination = currentDestination,
+                    onTabClick = { route ->
+                        if (route == Destinations.BUYER_HOME) {
+                            innerNav.popBackStack(Destinations.BUYER_HOME, inclusive = false)
+                        } else {
+                            innerNav.navigate(route) {
+                                launchSingleTop = true
+                                restoreState = true
+                                popUpTo(Destinations.BUYER_HOME) {
+                                    saveState = true
+                                }
                             }
                         }
                     }
-                }
-            )
+                )
+            }
         }
     }
 }
@@ -332,7 +338,53 @@ private fun BuyerTabNavHost(
             )
         }
 
-        composable(Destinations.BUYER_AI) { BuyerAiAssistScreen() }
+        composable(Destinations.BUYER_AI) {
+            BuyerAiRemoteAssistHome(
+                onEnterAi = {
+                    nav.navigate(BUYER_AI_PICK)
+                }
+            )
+        }
+
+        composable(BUYER_AI_PICK) {
+            BuyerAiVideoSelectScreen(
+                videos = buyerAiMockVideos(),
+                onBack = { nav.popBackStack() },
+                onSelectVideo = { video ->
+                    nav.navigate("$BUYER_AI_CALL/${video.id}")
+                }
+            )
+        }
+
+        composable(
+            route = "$BUYER_AI_CALL/{$BUYER_AI_CALL_ARG}",
+            arguments = listOf(
+                navArgument(BUYER_AI_CALL_ARG) {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val videoId = backStackEntry.arguments?.getString(BUYER_AI_CALL_ARG)
+            val video = buyerAiMockVideos().firstOrNull { it.id == videoId }
+
+            if (video != null) {
+                BuyerAiCallScreen(
+                    video = video,
+                    onExit = { nav.popBackStack() },
+                    onTransferHuman = {
+                        nav.popBackStack(BUYER_AI_PICK, inclusive = false)
+                    }
+                )
+            } else {
+                BuyerAiVideoSelectScreen(
+                    videos = buyerAiMockVideos(),
+                    onBack = { nav.popBackStack() },
+                    onSelectVideo = { selected ->
+                        nav.navigate("$BUYER_AI_CALL/${selected.id}")
+                    }
+                )
+            }
+        }
 
         composable(Destinations.BUYER_PROFILE) {
             BuyerProfileScreen(
@@ -470,6 +522,9 @@ private fun BuyerBottomBarItem(
 ---------------------------- */
 
 private const val BUYER_TUTORIAL_DETAIL = "buyer_tutorial_detail"
+private const val BUYER_AI_PICK = "buyer_ai_pick"
+private const val BUYER_AI_CALL = "buyer_ai_call"
+private const val BUYER_AI_CALL_ARG = "videoId"
 
 data class BuyerTutorialItem(
     val localId: Long,
@@ -543,7 +598,7 @@ private fun BuyerHomeScreen(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "扫描商品二维码，将项目加入“我的教程”，并可查看爆炸图、打开 Unity 教程播放器",
+                    text = "扫描商品二维码，将项目加入“我的教程”，并可查看爆炸图、打开教程播放器",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -815,13 +870,13 @@ private fun normalizeBuyerPreviewUrl(rawUrl: String?): String? {
 
     return when {
         rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
-//            rawUrl.replace("localhost", "10.0.2.2")
-            rawUrl.replace("localhost", "192.168.31.100")
+            rawUrl.replace("localhost", "10.0.2.2")
+//            rawUrl.replace("localhost", "172.20.10.3")
         }
 
         rawUrl.startsWith("/") -> {
-//            "http://10.0.2.2:8080$rawUrl"
-            "http://192.168.31.100:8080$rawUrl"
+            "http://10.0.2.2:8080$rawUrl"
+//            "http://172.20.10.3:8080$rawUrl"
         }
         else -> rawUrl
     }
@@ -1467,7 +1522,7 @@ private fun BuyerTutorialDetailScreen(
                     Spacer(Modifier.height(12.dp))
 
                     PrimaryPillButton(
-                        text = "打开 Unity 教程播放器",
+                        text = "打开教程播放器",
                         onClick = {
                             try {
                                 val intent = Intent(context, PickerUnityActivity::class.java).apply {

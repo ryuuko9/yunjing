@@ -92,9 +92,6 @@ import com.example.yunjing.ui.merchant.util.createVideoUri
 import com.example.yunjing.ui.merchant.viewmodel.MerchantContentViewModel
 import com.example.yunjing.ui.pressClick
 import com.google.android.filament.LightManager
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
 import io.github.sceneview.Scene
 import io.github.sceneview.math.Position
 import io.github.sceneview.model.ModelInstance
@@ -111,7 +108,7 @@ import kotlinx.coroutines.delay
  * 设计原则：
  * 1. 项目列表 / 项目详情 / 素材文件夹 / 重建选择 / 解析选择，恢复旧版页面节奏。
  * 2. 项目基础数据全部来自后端。
- * 3. fake 重建、fake 解析、进度条、结果持久化走 ViewModel 中的本地运行态，不污染后端表结构。
+ * 3. 重建、解析、进度条、结果持久化走 ViewModel 中的本地运行态，不污染后端表结构。
  * 4. 重命名、删除项目改为真实后端接口。
  *
  * 要求 ViewModel 补充的方法见文件底部注释。
@@ -292,10 +289,24 @@ fun MerchantContentScreen(
         val state = runtime ?: return@LaunchedEffect
         if (!state.isFakeRebuilding) return@LaunchedEffect
 
-        repeat(20) { index ->
-            delay(140)
+        val progressPoints = listOf(
+            0.08f, 0.18f, 0.30f, 0.42f, 0.53f,
+            0.62f, 0.70f, 0.77f, 0.83f, 0.88f,
+            0.91f, 0.94f, 0.96f, 0.975f, 0.985f,
+            0.992f, 0.996f, 0.998f, 0.999f, 1f
+        )
+
+        val delays = listOf(
+            400L, 500L, 600L, 700L, 900L,
+            1200L, 1500L, 1800L, 2200L, 2600L,
+            3000L, 3500L, 4000L, 4500L, 5000L,
+            5500L, 6000L, 6500L, 7000L, 7500L
+        )
+
+        for (i in progressPoints.indices) {
+            delay(delays[i])
             viewModel.updateRuntimeState(projectId) {
-                it.copy(rebuildProgress = (index + 1) / 20f)
+                it.copy(rebuildProgress = progressPoints[i])
             }
         }
 
@@ -308,10 +319,24 @@ fun MerchantContentScreen(
         val state = runtime ?: return@LaunchedEffect
         if (!state.isFakeParsing) return@LaunchedEffect
 
-        repeat(24) { index ->
-            delay(120)
+        val progressPoints = listOf(
+            0.08f, 0.18f, 0.30f, 0.42f, 0.53f,
+            0.62f, 0.70f, 0.77f, 0.83f, 0.88f,
+            0.91f, 0.94f, 0.96f, 0.975f, 0.985f,
+            0.992f, 0.996f, 0.998f, 0.999f, 1f
+        )
+
+        val delays = listOf(
+            400L, 500L, 600L, 700L, 900L,
+            1200L, 1500L, 1800L, 2200L, 2600L,
+            3000L, 3500L, 4000L, 4500L, 5000L,
+            5500L, 6000L, 6500L, 7000L, 7500L
+        )
+
+        for (i in progressPoints.indices) {
+            delay(delays[i])
             viewModel.updateRuntimeState(projectId) {
-                it.copy(parseProgress = (index + 1) / 24f)
+                it.copy(parseProgress = progressPoints[i])
             }
         }
 
@@ -527,7 +552,7 @@ fun MerchantContentScreen(
                                 ProgressBlock(
                                     title = "3D 重建中",
                                     progress = runtime.rebuildProgress,
-                                    hint = "当前为 fake 进度条，后续可接真实重建后端"
+                                    hint = "请稍后"
                                 )
                             }
 
@@ -557,7 +582,7 @@ fun MerchantContentScreen(
 
                         WorkbenchSectionCard(
                             title = "解析",
-                            desc = "恢复旧版解析交互，保留说明书解析 / 视频教程解析两种 fake 流程。",
+                            desc = "解析交互，说明书解析/视频教程解析两种流程。",
                             actionArea = {
                                 MiniChip(
                                     text = if (runtime.parseMode == ParseMode.EXPLODED_GUIDE) "切到视频教程解析" else "切到爆炸图解析",
@@ -665,9 +690,10 @@ fun MerchantContentScreen(
                                 ProgressBlock(
                                     title = "内容解析中",
                                     progress = runtime.parseProgress,
-                                    hint = "当前为 fake 解析进度，后续可接真实生成服务"
+                                    hint = "请稍后"
                                 )
                             }
+
 
                             if (!explodedImageUrl.isNullOrBlank()) {
                                 Spacer(Modifier.height(12.dp))
@@ -721,7 +747,7 @@ fun MerchantContentScreen(
                                         )
                                         Spacer(Modifier.height(12.dp))
                                         PrimaryPillButton(
-                                            text = "打开 Unity 教程播放器",
+                                            text = "打开教程播放器",
                                             onClick = { openUnityPlayer() }
                                         )
                                     }
@@ -1508,13 +1534,13 @@ private fun normalizePreviewUrl(rawUrl: String?): String? {
 
     return when {
         rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
-//            rawUrl.replace("localhost", "10.0.2.2")
-            rawUrl.replace("localhost", "192.168.31.100")
+            rawUrl.replace("localhost", "10.0.2.2")
+//            rawUrl.replace("localhost", "172.20.10.3")
         }
 
         rawUrl.startsWith("/") -> {
-//            "http://10.0.2.2:8080$rawUrl"
-            "http://192.168.31.100:8080$rawUrl"
+            "http://10.0.2.2:8080$rawUrl"
+//            "http://172.20.10.3:8080$rawUrl"
         }
 
         else -> rawUrl
@@ -1706,20 +1732,20 @@ private fun normalizeModelUrl(rawUrl: String?): String? {
         value.startsWith("http://", ignoreCase = true) ||
                 value.startsWith("https://", ignoreCase = true) -> {
             value
-//                .replace("localhost", "10.0.2.2")
-//                .replace("127.0.0.1", "10.0.2.2")
-                .replace("localhost", "192.168.31.100")
-                .replace("127.0.0.1", "192.168.31.100")
+                .replace("localhost", "10.0.2.2")
+                .replace("127.0.0.1", "10.0.2.2")
+//                .replace("localhost", "172.20.10.3")
+//                .replace("127.0.0.1", "172.20.10.3")
         }
 
         value.startsWith("/") -> {
-//            "http://10.0.2.2:8080$value"
-            "http://192.168.31.100:8080$value"
+            "http://10.0.2.2:8080$value"
+//            "http://172.20.10.3:8080$value"
         }
 
         else -> {
-//            "http://10.0.2.2:8080$value"
-            "http://192.168.31.100:8080/$value"
+            "http://10.0.2.2:8080$value"
+//            "http://172.20.10.3:8080/$value"
         }
     }
 }
@@ -1801,34 +1827,5 @@ private fun decodeBase64ToImageBitmap(base64Value: String?): ImageBitmap? {
     } catch (e: Exception) {
         e.printStackTrace()
         null
-    }
-}
-
-private fun decodeQrFromImageUriWithMlKit(
-    context: android.content.Context,
-    uri: Uri,
-    onResult: (String?) -> Unit
-) {
-    try {
-        val image = InputImage.fromFilePath(context, uri)
-
-        val options = com.google.mlkit.vision.barcode.BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-            .build()
-
-        val scanner = BarcodeScanning.getClient(options)
-
-        scanner.process(image)
-            .addOnSuccessListener { barcodes ->
-                val rawValue = barcodes.firstOrNull()?.rawValue
-                onResult(rawValue)
-            }
-            .addOnFailureListener {
-                it.printStackTrace()
-                onResult(null)
-            }
-    } catch (e: Exception) {
-        e.printStackTrace()
-        onResult(null)
     }
 }

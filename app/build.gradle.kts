@@ -60,6 +60,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(project(":unityLibrary"))
+    implementation(libs.androidx.compose.runtime)
 
     // Compose BOM
     val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
@@ -88,6 +89,9 @@ dependencies {
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
+    implementation("androidx.media3:media3-exoplayer:1.3.1")
+    implementation("androidx.media3:media3-ui:1.3.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 

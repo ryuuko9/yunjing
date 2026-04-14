@@ -7,8 +7,8 @@ import java.util.concurrent.TimeUnit
 
 object ApiProvider {
 
-//    private const val BASE_URL = "http://10.0.2.2:8080/"
-    private const val BASE_URL = "http://192.168.31.100:8080/"
+    private const val BASE_URL = "http://10.0.2.2:8080/"
+//    private const val BASE_URL = "http://172.20.10.3:8080/"
 
     private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()

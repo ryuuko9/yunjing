@@ -63,28 +63,28 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.example.yunjing.R
 
-data class BuyerAiDemoVideo(
+data class BuyerAiMockVideo(
     val id: String,
     val title: String,
     val desc: String,
     @RawRes val resId: Int
 )
 
-fun buyerAiDemoVideos(): List<BuyerAiDemoVideo> {
+fun buyerAiMockVideos(): List<BuyerAiMockVideo> {
     return listOf(
-        BuyerAiDemoVideo(
+        BuyerAiMockVideo(
             id = "demo_1",
             title = "",
             desc = "安装过程演示",
             resId = R.raw.buyer_ai_demo_1
         ),
-        BuyerAiDemoVideo(
+        BuyerAiMockVideo(
             id = "demo_2",
             title = "",
             desc = "安装过程演示",
             resId = R.raw.buyer_ai_demo_2
         ),
-        BuyerAiDemoVideo(
+        BuyerAiMockVideo(
             id = "demo_3",
             title = "",
             desc = "安装过程演示",
@@ -186,9 +186,9 @@ fun BuyerAiRemoteAssistHome(
 
 @Composable
 fun BuyerAiVideoSelectScreen(
-    videos: List<BuyerAiDemoVideo>,
+    videos: List<BuyerAiMockVideo>,
     onBack: () -> Unit,
-    onSelectVideo: (BuyerAiDemoVideo) -> Unit
+    onSelectVideo: (BuyerAiMockVideo) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -259,7 +259,7 @@ fun BuyerAiVideoSelectScreen(
 
 @Composable
 private fun BuyerAiVideoCard(
-    video: BuyerAiDemoVideo,
+    video: BuyerAiMockVideo,
     onClick: () -> Unit
 ) {
     Card(
@@ -310,7 +310,7 @@ private fun BuyerAiVideoCard(
 
 @Composable
 fun BuyerAiCallScreen(
-    video: BuyerAiDemoVideo,
+    video: BuyerAiMockVideo,
     onExit: () -> Unit,
     onTransferHuman: () -> Unit
 ) {
