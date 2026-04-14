@@ -1522,13 +1522,13 @@ private fun normalizePreviewUrl(rawUrl: String?): String? {
 
     return when {
         rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
-//            rawUrl.replace("localhost", "10.0.2.2")
-            rawUrl.replace("localhost", "172.20.10.3")
+            rawUrl.replace("localhost", "10.0.2.2")
+//            rawUrl.replace("localhost", "172.20.10.3")
         }
 
         rawUrl.startsWith("/") -> {
-//            "http://10.0.2.2:8080$rawUrl"
-            "http://172.20.10.3:8080$rawUrl"
+            "http://10.0.2.2:8080$rawUrl"
+//            "http://172.20.10.3:8080$rawUrl"
         }
 
         else -> rawUrl
@@ -1720,20 +1720,20 @@ private fun normalizeModelUrl(rawUrl: String?): String? {
         value.startsWith("http://", ignoreCase = true) ||
                 value.startsWith("https://", ignoreCase = true) -> {
             value
-//                .replace("localhost", "10.0.2.2")
-//                .replace("127.0.0.1", "10.0.2.2")
-                .replace("localhost", "172.20.10.3")
-                .replace("127.0.0.1", "172.20.10.3")
+                .replace("localhost", "10.0.2.2")
+                .replace("127.0.0.1", "10.0.2.2")
+//                .replace("localhost", "172.20.10.3")
+//                .replace("127.0.0.1", "172.20.10.3")
         }
 
         value.startsWith("/") -> {
-//            "http://10.0.2.2:8080$value"
-            "http://172.20.10.3:8080$value"
+            "http://10.0.2.2:8080$value"
+//            "http://172.20.10.3:8080$value"
         }
 
         else -> {
-//            "http://10.0.2.2:8080$value"
-            "http://172.20.10.3:8080/$value"
+            "http://10.0.2.2:8080$value"
+//            "http://172.20.10.3:8080/$value"
         }
     }
 }

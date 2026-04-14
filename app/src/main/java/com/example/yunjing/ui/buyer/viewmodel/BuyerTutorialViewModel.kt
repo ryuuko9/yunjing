@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.yunjing.ui.buyer.model.BuyerTutorialDto
 import com.example.yunjing.ui.buyer.repository.BuyerTutorialRepository
+import com.example.yunjing.ui.merchant.model.ApiResponse
 import kotlinx.coroutines.launch
 
 class BuyerTutorialViewModel(
@@ -16,7 +17,6 @@ class BuyerTutorialViewModel(
 
     val tutorials = mutableStateListOf<BuyerTutorialDto>()
 
-    var selectedTutorial by mutableStateOf<BuyerTutorialDto?>(null)
     var errorMessage by mutableStateOf<String?>(null)
     var isLoading by mutableStateOf(false)
 
@@ -25,21 +25,12 @@ class BuyerTutorialViewModel(
     }
 
     fun loadTutorials(buyerUserId: Long) {
-        viewModelScope.launch {
-            isLoading = true
-            runCatching {
-                repository.listTutorials(buyerUserId)
-            }.onSuccess { response ->
-                if (response.success && response.data != null) {
-                    tutorials.clear()
-                    tutorials.addAll(response.data)
-                } else {
-                    errorMessage = response.message.ifBlank { "加载教程失败" }
-                }
-            }.onFailure {
-                errorMessage = it.message ?: "加载教程失败"
+        launchRequest(defaultErrorMessage = "加载教程失败") {
+            val response = repository.listTutorials(buyerUserId)
+            handleRequiredDataResponse(response, fallbackErrorMessage = "加载教程失败") { items ->
+                tutorials.clear()
+                tutorials.addAll(items)
             }
-            isLoading = false
         }
     }
 
@@ -48,27 +39,17 @@ class BuyerTutorialViewModel(
         buyerUserId: Long,
         onSuccess: (() -> Unit)? = null
     ) {
-        viewModelScope.launch {
-            isLoading = true
-            runCatching {
-                repository.importTutorial(publishCode, buyerUserId)
-            }.onSuccess { response ->
-                if (response.success && response.data != null) {
-                    val item = response.data
-                    val index = tutorials.indexOfFirst { it.id == item.id }
-                    if (index >= 0) {
-                        tutorials[index] = item
-                    } else {
-                        tutorials.add(0, item)
-                    }
-                    onSuccess?.invoke()
+        launchRequest(defaultErrorMessage = "导入教程失败") {
+            val response = repository.importTutorial(publishCode, buyerUserId)
+            handleRequiredDataResponse(response, fallbackErrorMessage = "导入教程失败") { item ->
+                val index = tutorials.indexOfFirst { it.id == item.id }
+                if (index >= 0) {
+                    tutorials[index] = item
                 } else {
-                    errorMessage = response.message.ifBlank { "导入教程失败" }
+                    tutorials.add(0, item)
                 }
-            }.onFailure {
-                errorMessage = it.message ?: "导入教程失败"
+                onSuccess?.invoke()
             }
-            isLoading = false
         }
     }
 
@@ -77,24 +58,55 @@ class BuyerTutorialViewModel(
         buyerUserId: Long,
         onSuccess: (() -> Unit)? = null
     ) {
+        launchRequest(defaultErrorMessage = "删除教程失败") {
+            val response = repository.deleteTutorial(tutorialId, buyerUserId)
+            handleResponse(response, fallbackErrorMessage = "删除教程失败") {
+                tutorials.removeAll { it.id == tutorialId }
+                onSuccess?.invoke()
+            }
+        }
+    }
+
+    private fun launchRequest(
+        defaultErrorMessage: String,
+        block: suspend () -> Unit
+    ) {
         viewModelScope.launch {
             isLoading = true
-            runCatching {
-                repository.deleteTutorial(tutorialId, buyerUserId)
-            }.onSuccess { response ->
-                if (response.success) {
-                    tutorials.removeAll { it.id == tutorialId }
-                    if (selectedTutorial?.id == tutorialId) {
-                        selectedTutorial = null
-                    }
-                    onSuccess?.invoke()
-                } else {
-                    errorMessage = response.message.ifBlank { "删除教程失败" }
-                }
-            }.onFailure {
-                errorMessage = it.message ?: "删除教程失败"
+            try {
+                block()
+            } catch (throwable: Throwable) {
+                errorMessage = throwable.message ?: defaultErrorMessage
+            } finally {
+                isLoading = false
             }
-            isLoading = false
         }
+    }
+
+    private fun handleResponse(
+        response: ApiResponse<*>,
+        fallbackErrorMessage: String,
+        onSuccess: () -> Unit
+    ) {
+        if (response.success) {
+            onSuccess()
+            return
+        }
+
+        errorMessage = response.message.ifBlank { fallbackErrorMessage }
+    }
+
+    private fun <T> handleRequiredDataResponse(
+        response: ApiResponse<T>,
+        fallbackErrorMessage: String,
+        onSuccess: (T) -> Unit
+    ) {
+        val data = response.data
+        if (response.success && data != null) {
+            onSuccess(data)
+            return
+        }
+
+        errorMessage = response.message.ifBlank { fallbackErrorMessage }
     }
 }
