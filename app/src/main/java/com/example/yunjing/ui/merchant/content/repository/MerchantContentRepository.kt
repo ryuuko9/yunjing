@@ -1,19 +1,19 @@
-package com.example.yunjing.ui.merchant.repository
+package com.example.yunjing.ui.merchant.content.repository
 
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import com.example.yunjing.ui.merchant.content.model.ParseProjectRequest
+import com.example.yunjing.ui.merchant.content.model.RenameProjectRequest
 import com.example.yunjing.ui.merchant.model.ApiResponse
 import com.example.yunjing.ui.merchant.model.CreateProjectRequest
 import com.example.yunjing.ui.merchant.model.MerchantProjectDetailDto
 import com.example.yunjing.ui.merchant.model.MerchantProjectDto
-import com.example.yunjing.ui.merchant.model.ParseProjectRequest
 import com.example.yunjing.ui.merchant.model.ProjectMediaAssetDto
 import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
 import com.example.yunjing.ui.merchant.model.ProjectResponseDto
 import com.example.yunjing.ui.merchant.model.RebuildRequest
-import com.example.yunjing.ui.merchant.model.RenameProjectRequest
 import com.example.yunjing.ui.merchant.network.MerchantContentApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -27,6 +27,9 @@ import retrofit2.Response
 import java.io.File
 import java.io.FileOutputStream
 
+/**
+ * 本文件负责封装 merchant 内容库相关的数据访问与错误收口逻辑。
+ */
 class MerchantContentRepository(
     private val api: MerchantContentApi
 ) {

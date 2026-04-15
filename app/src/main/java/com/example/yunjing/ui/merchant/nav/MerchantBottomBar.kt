@@ -1,4 +1,4 @@
-package com.example.yunjing.ui.merchant.component
+package com.example.yunjing.ui.merchant.nav
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -34,16 +34,21 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
 import com.example.yunjing.nav.Destinations
-import com.example.yunjing.ui.merchant.model.MerchantTab
+import com.example.yunjing.ui.merchant.common.model.MerchantTab
 import com.example.yunjing.ui.pressClick
 
-// 把底部栏和 tab 逻辑挪出来
+/**
+ * 本文件负责 merchant 端底部导航栏的展示与选中态切换。
+ */
 
 @Composable
 fun MerchantBottomBar(
     currentDestination: NavDestination?,
     onTabClick: (String) -> Unit
 ) {
+    /**
+     * 这个函数负责渲染 merchant 端底部导航栏，并把点击事件回传给主壳层。
+     */
     val tabs = remember {
         listOf(
             MerchantTab(Destinations.MERCHANT_DASH, "工作台", Icons.Filled.Dashboard),
@@ -93,6 +98,9 @@ private fun MerchantBottomBarItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit
 ) {
+    /**
+     * 这个函数负责绘制单个底部导航项，并根据选中态调整透明度与缩放。
+     */
     val alpha = animateFloatAsState(
         targetValue = if (selected) 1f else 0.55f,
         label = "mTabAlpha"

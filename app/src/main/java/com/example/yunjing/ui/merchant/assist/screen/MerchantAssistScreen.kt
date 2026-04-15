@@ -1,4 +1,4 @@
-package com.example.yunjing.ui.merchant.screen
+package com.example.yunjing.ui.merchant.assist.screen
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
@@ -8,13 +8,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.yunjing.ui.merchant.component.PrimaryPillButton
-import com.example.yunjing.ui.merchant.component.SoftCard
+import com.example.yunjing.ui.merchant.common.component.PrimaryPillButton
+import com.example.yunjing.ui.merchant.common.component.SoftCard
 
-// 远程协助界面
+/**
+ * 本文件负责展示 merchant 端的远程协助入口页。
+ */
 
 @Composable
 fun MerchantAssistScreen() {
+    /**
+     * 这个函数负责渲染远程协助首页的说明文案与入口按钮。
+     */
     Column(
         modifier = Modifier
             .fillMaxSize()

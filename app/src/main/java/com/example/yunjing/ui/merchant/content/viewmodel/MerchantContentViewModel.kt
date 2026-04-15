@@ -1,4 +1,4 @@
-package com.example.yunjing.ui.merchant.viewmodel
+package com.example.yunjing.ui.merchant.content.viewmodel
 
 import android.content.Context
 import android.net.Uri
@@ -9,15 +9,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.yunjing.ui.merchant.model.ContentPageState
+import com.example.yunjing.ui.merchant.content.model.ContentPageState
+import com.example.yunjing.ui.merchant.content.model.ParseMode
+import com.example.yunjing.ui.merchant.content.repository.MerchantContentRepository
 import com.example.yunjing.ui.merchant.model.MerchantProjectDetailDto
 import com.example.yunjing.ui.merchant.model.MerchantProjectDto
-import com.example.yunjing.ui.merchant.model.ParseMode
 import com.example.yunjing.ui.merchant.model.ProjectMediaAssetDto
 import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
 import com.example.yunjing.ui.merchant.model.toMerchantProjectDto
-import com.example.yunjing.ui.merchant.repository.MerchantContentRepository
 import kotlinx.coroutines.launch
+
+/**
+ * 本文件负责维护 merchant 内容库页面的共享状态、流程动作与页面切换。
+ */
 
 enum class LibraryStage {
     PENDING_UPLOAD,

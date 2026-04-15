@@ -1,4 +1,4 @@
-package com.example.yunjing.ui.merchant.component
+package com.example.yunjing.ui.merchant.common.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -27,7 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.yunjing.ui.pressClick
 
-// 把全局复用组件都放进去
+/**
+ * 本文件负责存放 merchant 多个功能域共享的基础组件与背景样式。
+ */
 
 @Composable
 fun Modifier.merchantSoftBackground(): Modifier {

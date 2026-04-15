@@ -1,13 +1,18 @@
-package com.example.yunjing.ui.merchant.util
+package com.example.yunjing.ui.merchant.content.media
 
 import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
 
-// 媒体工具函数
+/**
+ * 本文件负责创建内容库拍照、录像时使用的媒体 Uri。
+ */
 
 fun createImageUri(context: Context): Uri {
+    /**
+     * 这个函数负责为拍照上传创建图片输出 Uri。
+     */
     val contentValues = ContentValues().apply {
         put(
             MediaStore.Images.Media.DISPLAY_NAME,
@@ -23,6 +28,9 @@ fun createImageUri(context: Context): Uri {
 }
 
 fun createVideoUri(context: Context): Uri {
+    /**
+     * 这个函数负责为录像上传创建视频输出 Uri。
+     */
     val contentValues = ContentValues().apply {
         put(
             MediaStore.Video.Media.DISPLAY_NAME,

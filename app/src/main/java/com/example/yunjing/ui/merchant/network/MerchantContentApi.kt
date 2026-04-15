@@ -4,11 +4,11 @@ import com.example.yunjing.ui.merchant.model.ApiResponse
 import com.example.yunjing.ui.merchant.model.CreateProjectRequest
 import com.example.yunjing.ui.merchant.model.MerchantProjectDetailDto
 import com.example.yunjing.ui.merchant.model.MerchantProjectDto
-import com.example.yunjing.ui.merchant.model.ParseProjectRequest
+import com.example.yunjing.ui.merchant.content.model.ParseProjectRequest
 import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
 import com.example.yunjing.ui.merchant.model.ProjectResponseDto
 import com.example.yunjing.ui.merchant.model.RebuildRequest
-import com.example.yunjing.ui.merchant.model.RenameProjectRequest
+import com.example.yunjing.ui.merchant.content.model.RenameProjectRequest
 import com.example.yunjing.ui.merchant.model.UploadMediaResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody

@@ -1,18 +1,13 @@
-package com.example.yunjing.ui.merchant.screen
+package com.example.yunjing.ui.merchant.content.screen
 
 import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.pm.PackageManager
-import android.graphics.BitmapFactory
 import android.net.Uri
-import android.util.Base64
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,93 +17,75 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.ViewInAr
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import com.example.yunjing.ui.merchant.component.CreateProjectDialog
-import com.example.yunjing.ui.merchant.component.DeleteMediaDialog
-import com.example.yunjing.ui.merchant.component.MaterialFolderCard
-import com.example.yunjing.ui.merchant.component.MiniChip
-import com.example.yunjing.ui.merchant.component.PrimaryPillButton
-import com.example.yunjing.ui.merchant.component.ProgressBlock
-import com.example.yunjing.ui.merchant.component.ProjectListItem
-import com.example.yunjing.ui.merchant.component.ProjectSettingMenu
-import com.example.yunjing.ui.merchant.component.RenameProjectDialog
-import com.example.yunjing.ui.merchant.component.SoftCard
-import com.example.yunjing.ui.merchant.component.UploadEntrySheet
-import com.example.yunjing.ui.merchant.component.WorkbenchSectionCard
-import com.example.yunjing.ui.merchant.model.ContentPageState
-import com.example.yunjing.ui.merchant.model.ParseMode
+import com.example.yunjing.ui.merchant.common.component.MiniChip
+import com.example.yunjing.ui.merchant.common.component.PrimaryPillButton
+import com.example.yunjing.ui.merchant.common.component.SoftCard
+import com.example.yunjing.ui.merchant.content.component.CreateProjectDialog
+import com.example.yunjing.ui.merchant.content.component.DeleteMediaDialog
+import com.example.yunjing.ui.merchant.content.component.MaterialFolderCard
+import com.example.yunjing.ui.merchant.content.component.ProgressBlock
+import com.example.yunjing.ui.merchant.content.component.ProjectListItem
+import com.example.yunjing.ui.merchant.content.component.ProjectSettingMenu
+import com.example.yunjing.ui.merchant.content.component.RenameProjectDialog
+import com.example.yunjing.ui.merchant.content.component.UploadEntrySheet
+import com.example.yunjing.ui.merchant.content.component.WorkbenchSectionCard
+import com.example.yunjing.ui.merchant.content.media.createImageUri
+import com.example.yunjing.ui.merchant.content.media.createVideoUri
+import com.example.yunjing.ui.merchant.content.model.ContentPageState
+import com.example.yunjing.ui.merchant.content.model.MerchantContentProject
+import com.example.yunjing.ui.merchant.content.model.ParseMode
+import com.example.yunjing.ui.merchant.content.viewmodel.MerchantContentViewModel
 import com.example.yunjing.ui.merchant.model.ProjectMediaAssetDto
 import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
-import com.example.yunjing.ui.merchant.util.createImageUri
-import com.example.yunjing.ui.merchant.util.createVideoUri
-import com.example.yunjing.ui.merchant.viewmodel.MerchantContentViewModel
 import com.example.yunjing.ui.pressClick
 import com.example.yunjing.ui.unity.canOpenUnityPlayer
 import com.example.yunjing.ui.unity.createUnityPlayerIntent
-import com.google.android.filament.LightManager
-import io.github.sceneview.Scene
-import io.github.sceneview.math.Position
-import io.github.sceneview.model.ModelInstance
-import io.github.sceneview.rememberCameraManipulator
-import io.github.sceneview.rememberEngine
-import io.github.sceneview.rememberEnvironment
-import io.github.sceneview.rememberEnvironmentLoader
-import io.github.sceneview.rememberModelLoader
 import kotlinx.coroutines.delay
+
+/**
+ * 本文件负责作为 merchant 内容库页面的主入口，统一处理状态读取、事件调度和页面分发。
+ */
 
 @Composable
 fun MerchantContentScreen(
     viewModel: MerchantContentViewModel,
     initialProjectId: Long? = null
 ) {
+    /**
+     * 这个函数负责连接内容库 ViewModel 与各个子页面，并维持上传、权限、预览等跨页面状态。
+     */
     val context = LocalContext.current
 
     LaunchedEffect(viewModel.errorMessage) {
@@ -387,7 +364,7 @@ fun MerchantContentScreen(
 
                 items(projects, key = { it.id }) { project ->
                     ProjectListItem(
-                        project = com.example.yunjing.ui.merchant.model.MerchantContentProject(
+                        project = MerchantContentProject(
                             id = project.id,
                             name = project.projectName,
                             summary = project.projectDesc ?: "点击进入项目工作台",
@@ -1232,607 +1209,5 @@ fun MerchantContentScreen(
             imageUrl = imageUrl,
             onDismiss = { explodedImagePreviewUrl = null }
         )
-    }
-}
-
-@Composable
-fun DeleteProjectDialog(
-    projectName: String,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("删除项目") },
-        text = { Text("确认删除项目“$projectName”吗？删除后不可恢复。") },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text("删除")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
-    )
-}
-
-@Composable
-fun BackendMediaRow(
-    item: ProjectMediaAssetDto,
-    onPreview: () -> Unit,
-    onDelete: () -> Unit
-) {
-    SoftCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    item.fileName,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    if (item.assetType.equals("VIDEO", true)) "视频素材" else "图片素材",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onPreview) {
-                    Text("预览")
-                }
-
-                Spacer(Modifier.width(4.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                        .background(Color(0xFFFF3B30).copy(alpha = 0.12f))
-                        .pressClick(onClick = onDelete),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.ClearAll,
-                        contentDescription = "删除素材",
-                        tint = Color(0xFFFF3B30)
-                    )
-                }
-            }
-        }
-    }
-}
-@Composable
-fun BackendSelectableMediaRow(
-    item: ProjectMediaAssetDto,
-    selected: Boolean,
-    onToggle: () -> Unit
-) {
-    SoftCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .pressClick(onClick = onToggle),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(item.fileName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    if (item.assetType.equals("VIDEO", true)) "视频素材" else "图片素材",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Icon(
-                imageVector = if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
-                contentDescription = null,
-                tint = if (selected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.outline
-                }
-            )
-        }
-    }
-}
-
-@Composable
-fun BackendModelRow(
-    item: ProjectModelAssetDto,
-    onPreview: () -> Unit
-) {
-    SoftCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(item.modelName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    item.fileUrl,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            TextButton(onClick = onPreview) {
-                Text("预览")
-            }
-        }
-    }
-}
-
-@Composable
-fun BackendSelectableModelRow(
-    item: ProjectModelAssetDto,
-    selected: Boolean,
-    onToggle: () -> Unit
-) {
-    SoftCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .pressClick(onClick = onToggle),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(item.modelName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    item.fileUrl,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Icon(
-                imageVector = if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
-                contentDescription = null,
-                tint = if (selected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.outline
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun BackendMediaPreviewDialog(
-    item: ProjectMediaAssetDto,
-    localUri: Uri?,
-    onDismiss: () -> Unit
-) {
-    val context = LocalContext.current
-    val remoteUrl = remember(item.fileUrl) { normalizePreviewUrl(item.fileUrl) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("关闭")
-            }
-        },
-        title = {
-            Text(item.fileName)
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                when {
-                    item.assetType.equals("VIDEO", true) -> {
-                        when {
-                            localUri != null -> {
-                                AndroidView(
-                                    factory = { ctx ->
-                                        android.widget.VideoView(ctx).apply {
-                                            setVideoURI(localUri)
-                                            setOnPreparedListener { mp ->
-                                                mp.isLooping = true
-                                                start()
-                                            }
-                                        }
-                                    },
-                                    update = { view ->
-                                        view.setVideoURI(localUri)
-                                        view.setOnPreparedListener { mp ->
-                                            mp.isLooping = true
-                                            view.start()
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(260.dp)
-                                )
-                            }
-
-                            !remoteUrl.isNullOrBlank() -> {
-                                AndroidView(
-                                    factory = { ctx ->
-                                        android.widget.VideoView(ctx).apply {
-                                            setVideoPath(remoteUrl)
-                                            setOnPreparedListener { mp ->
-                                                mp.isLooping = true
-                                                start()
-                                            }
-                                        }
-                                    },
-                                    update = { view ->
-                                        view.setVideoPath(remoteUrl)
-                                        view.setOnPreparedListener { mp ->
-                                            mp.isLooping = true
-                                            view.start()
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(260.dp)
-                                )
-                            }
-
-                            else -> {
-                                Text(
-                                    "当前视频暂无可用预览地址",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-
-                    localUri != null -> {
-                        AsyncImage(
-                            model = localUri,
-                            contentDescription = item.fileName,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(260.dp)
-                                .clip(RoundedCornerShape(12.dp)),
-                            contentScale = ContentScale.Fit
-                        )
-                    }
-
-                    !remoteUrl.isNullOrBlank() -> {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(remoteUrl)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = item.fileName,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(260.dp)
-                                .clip(RoundedCornerShape(12.dp)),
-                            contentScale = ContentScale.Fit
-                        )
-                    }
-
-                    else -> {
-                        Text(
-                            "当前图片暂无可用预览地址",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-    )
-}
-
-private fun normalizePreviewUrl(rawUrl: String?): String? {
-    if (rawUrl.isNullOrBlank()) return null
-
-    return when {
-        rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
-            rawUrl.replace("localhost", "10.0.2.2")
-//            rawUrl.replace("localhost", "172.20.10.3")
-        }
-
-        rawUrl.startsWith("/") -> {
-            "http://10.0.2.2:8080$rawUrl"
-//            "http://172.20.10.3:8080$rawUrl"
-        }
-
-        else -> rawUrl
-    }
-}
-
-@Composable
-private fun ModelPreviewContent(
-    model: ProjectModelAssetDto,
-    onBack: () -> Unit
-) {
-    val modelUrl = remember(model.fileUrl) { normalizeModelUrl(model.fileUrl) }
-
-    val engine = rememberEngine()
-    val modelLoader = rememberModelLoader(engine)
-    val environmentLoader = rememberEnvironmentLoader(engine)
-
-    val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/qwantani_dusk_2_puresky_2k.hdr")!!
-    }
-
-    val cameraManipulator = rememberCameraManipulator()
-
-    var modelInstance by remember(modelUrl) { mutableStateOf<ModelInstance?>(null) }
-    var isLoading by remember(modelUrl) { mutableStateOf(false) }
-    var loadError by remember(modelUrl) { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(modelUrl) {
-        modelInstance = null
-        loadError = null
-
-        if (modelUrl.isNullOrBlank()) {
-            loadError = "模型地址为空"
-            return@LaunchedEffect
-        }
-
-        isLoading = true
-        try {
-            modelLoader.loadModelInstanceAsync(
-                fileLocation = modelUrl,
-                onResult = { instance ->
-                    modelInstance = instance
-                    if (instance == null) {
-                        loadError = "模型实例化失败"
-                    }
-                    isLoading = false
-                }
-            )
-        } catch (e: Exception) {
-            e.printStackTrace()
-            loadError = e.message ?: "模型加载失败"
-            isLoading = false
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .padding(horizontal = 20.dp)
-    ) {
-        Spacer(Modifier.height(14.dp))
-
-        MiniChip(
-            text = "返回模型文件夹",
-            icon = Icons.AutoMirrored.Filled.ArrowBack,
-            onClick = onBack,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(Modifier.height(14.dp))
-
-        Text(
-            text = model.modelName.ifBlank { "模型预览" },
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        Spacer(Modifier.height(6.dp))
-
-        Text(
-            text = modelUrl ?: "模型地址为空",
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color.Black),
-            contentAlignment = Alignment.Center
-        ) {
-            Scene(
-                modifier = Modifier.fillMaxSize(),
-                engine = engine,
-                modelLoader = modelLoader,
-                environment = environment,
-                cameraManipulator = cameraManipulator
-            ) {
-                modelInstance?.let { instance ->
-                    ModelNode(
-                        modelInstance = instance,
-                        scaleToUnits = 1.2f,
-                        centerOrigin = Position(0.0f, 0.0f, 0.0f),
-                        isEditable = true
-                    )
-                }
-
-                // 主光：从前上方打下来
-                LightNode(
-                    type = LightManager.Type.DIRECTIONAL,
-                    apply = {
-                        color(1.0f, 1.0f, 1.0f)
-                        intensity(120_000f)
-                        direction(-0.6f, -1.0f, -0.8f)
-                        castShadows(false)
-                    }
-                )
-
-                // 背面补光
-                LightNode(
-                    type = LightManager.Type.DIRECTIONAL,
-                    apply = {
-                        color(1.0f, 1.0f, 1.0f)
-                        intensity(70_000f)
-                        direction(0.6f, -0.5f, 0.8f)
-                        castShadows(false)
-                    }
-                )
-
-                // 左侧补光
-                LightNode(
-                    type = LightManager.Type.DIRECTIONAL,
-                    apply = {
-                        color(1.0f, 1.0f, 1.0f)
-                        intensity(55_000f)
-                        direction(1.0f, -0.2f, 0.0f)
-                        castShadows(false)
-                    }
-                )
-
-                // 右侧补光
-                LightNode(
-                    type = LightManager.Type.DIRECTIONAL,
-                    apply = {
-                        color(1.0f, 1.0f, 1.0f)
-                        intensity(55_000f)
-                        direction(-1.0f, -0.2f, 0.0f)
-                        castShadows(false)
-                    }
-                )
-
-                // 底部补光：专门解决“底面发黑”
-                LightNode(
-                    type = LightManager.Type.DIRECTIONAL,
-                    apply = {
-                        color(1.0f, 1.0f, 1.0f)
-                        intensity(45_000f)
-                        direction(0.0f, 1.0f, 0.0f)
-                        castShadows(false)
-                    }
-                )
-            }
-
-            when {
-                modelUrl.isNullOrBlank() -> {
-                    Text("模型地址为空", color = Color.White)
-                }
-
-                loadError != null -> {
-                    Text(loadError ?: "模型加载失败", color = Color.White)
-                }
-
-                isLoading -> {
-                    CircularProgressIndicator()
-                }
-            }
-        }
-    }
-}
-
-private fun normalizeModelUrl(rawUrl: String?): String? {
-    val value = rawUrl?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-
-    return when {
-        value.startsWith("http://", ignoreCase = true) ||
-                value.startsWith("https://", ignoreCase = true) -> {
-            value
-                .replace("localhost", "10.0.2.2")
-                .replace("127.0.0.1", "10.0.2.2")
-//                .replace("localhost", "172.20.10.3")
-//                .replace("127.0.0.1", "172.20.10.3")
-        }
-
-        value.startsWith("/") -> {
-            "http://10.0.2.2:8080$value"
-//            "http://172.20.10.3:8080$value"
-        }
-
-        else -> {
-            "http://10.0.2.2:8080$value"
-//            "http://172.20.10.3:8080/$value"
-        }
-    }
-}
-
-@Composable
-private fun ExplodedImagePreviewDialog(
-    imageUrl: String,
-    onDismiss: () -> Unit
-) {
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offsetX by remember { mutableFloatStateOf(0f) }
-    var offsetY by remember { mutableFloatStateOf(0f) }
-
-    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
-        val newScale = (scale * zoomChange).coerceIn(1f, 5f)
-
-        if (newScale == 1f) {
-            offsetX = 0f
-            offsetY = 0f
-        } else {
-            offsetX += panChange.x
-            offsetY += panChange.y
-        }
-
-        scale = newScale
-    }
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-                .systemBarsPadding()
-                .navigationBarsPadding()
-        ) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = "爆炸图全屏预览",
-                modifier = Modifier
-                    .fillMaxSize()
-                    .transformable(transformState)
-                    .graphicsLayer(
-                        scaleX = scale,
-                        scaleY = scale,
-                        translationX = offsetX,
-                        translationY = offsetY
-                    ),
-                contentScale = ContentScale.Fit
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text("关闭", color = Color.White)
-                }
-            }
-        }
-    }
-}
-
-private fun decodeBase64ToImageBitmap(base64Value: String?): ImageBitmap? {
-    return try {
-        if (base64Value.isNullOrBlank()) return null
-
-        val pureBase64 = base64Value.substringAfter("base64,", base64Value)
-        val bytes = Base64.decode(pureBase64, Base64.DEFAULT)
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null
     }
 }

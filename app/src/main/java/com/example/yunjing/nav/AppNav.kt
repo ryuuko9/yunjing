@@ -29,7 +29,7 @@ import com.example.yunjing.ui.RoleSelectScreen
 import com.example.yunjing.ui.buyer.BuyerMainShell
 import com.example.yunjing.ui.buyer.repository.BuyerTutorialRepository
 import com.example.yunjing.ui.buyer.viewmodel.BuyerTutorialViewModel
-import com.example.yunjing.ui.merchant.MerchantMainShell
+import com.example.yunjing.ui.merchant.nav.MerchantMainShell
 import kotlinx.coroutines.launch
 
 @Composable

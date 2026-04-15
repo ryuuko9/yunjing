@@ -1,4 +1,4 @@
-package com.example.yunjing.ui.merchant
+package com.example.yunjing.ui.merchant.nav
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,18 +16,24 @@ import androidx.navigation.compose.rememberNavController
 import com.example.yunjing.data.AuthStore
 import com.example.yunjing.data.UserRole
 import com.example.yunjing.nav.Destinations
-import com.example.yunjing.ui.merchant.component.MerchantBottomBar
-import com.example.yunjing.ui.merchant.component.merchantSoftBackground
+import com.example.yunjing.ui.merchant.common.component.merchantSoftBackground
+import com.example.yunjing.ui.merchant.content.repository.MerchantContentRepository
+import com.example.yunjing.ui.merchant.content.viewmodel.MerchantContentViewModel
+import com.example.yunjing.ui.merchant.content.viewmodel.MerchantContentViewModelFactory
 import com.example.yunjing.ui.merchant.network.ApiProvider
-import com.example.yunjing.ui.merchant.repository.MerchantContentRepository
-import com.example.yunjing.ui.merchant.viewmodel.MerchantContentViewModel
-import com.example.yunjing.ui.merchant.viewmodel.MerchantContentViewModelFactory
+
+/**
+ * 本文件负责组装 merchant 端主壳层，统一初始化导航、账号信息与内容库 ViewModel。
+ */
 
 @Composable
 fun MerchantMainShell(
     onSwitchRole: () -> Unit,
     onLogout: () -> Unit
 ) {
+    /**
+     * 这个函数负责初始化 merchant 主壳层依赖，并把导航与底部栏组装到同一个页面容器中。
+     */
     val innerNav = rememberNavController()
     val context = LocalContext.current
     val authStore = remember(context) { AuthStore(context) }

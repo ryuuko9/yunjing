@@ -1,4 +1,4 @@
-package com.example.yunjing.ui.merchant
+package com.example.yunjing.ui.merchant.nav
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
@@ -7,12 +7,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.yunjing.nav.Destinations
-import com.example.yunjing.ui.merchant.screen.DashboardProjectItem
-import com.example.yunjing.ui.merchant.screen.MerchantAssistScreen
-import com.example.yunjing.ui.merchant.screen.MerchantContentScreen
-import com.example.yunjing.ui.merchant.screen.MerchantDashboardScreen
-import com.example.yunjing.ui.merchant.screen.MerchantProfileScreen
-import com.example.yunjing.ui.merchant.viewmodel.MerchantContentViewModel
+import com.example.yunjing.ui.merchant.assist.screen.MerchantAssistScreen
+import com.example.yunjing.ui.merchant.content.screen.MerchantContentScreen
+import com.example.yunjing.ui.merchant.content.viewmodel.MerchantContentViewModel
+import com.example.yunjing.ui.merchant.dashboard.screen.DashboardProjectItem
+import com.example.yunjing.ui.merchant.dashboard.screen.MerchantDashboardScreen
+import com.example.yunjing.ui.merchant.profile.screen.MerchantProfileScreen
+
+/**
+ * 本文件负责维护 merchant 端内部导航图，并把页面路由与共享 ViewModel 连接起来。
+ */
 
 @Composable
 fun MerchantNavHost(
@@ -22,6 +26,9 @@ fun MerchantNavHost(
     onLogout: () -> Unit,
     contentViewModel: MerchantContentViewModel
 ) {
+    /**
+     * 这个函数负责声明 merchant 端的页面路由，并在不同页面之间共享内容库状态。
+     */
     NavHost(
         navController = nav,
         startDestination = Destinations.MERCHANT_DASH

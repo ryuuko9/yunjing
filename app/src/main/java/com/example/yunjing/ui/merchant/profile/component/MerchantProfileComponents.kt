@@ -1,4 +1,4 @@
-package com.example.yunjing.ui.merchant.component
+package com.example.yunjing.ui.merchant.profile.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,7 +29,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.yunjing.ui.pressClick
 
-// “我的” 页的专属组件
+/**
+ * 本文件负责存放 merchant “我的”页面专用组件。
+ */
 
 @Composable
 fun ProfileEntryCard(

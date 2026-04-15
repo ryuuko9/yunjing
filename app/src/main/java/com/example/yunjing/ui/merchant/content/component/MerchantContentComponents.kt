@@ -1,4 +1,4 @@
-package com.example.yunjing.ui.merchant.component
+package com.example.yunjing.ui.merchant.content.component
 
 import android.net.Uri
 import android.widget.ImageView
@@ -53,12 +53,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.example.yunjing.ui.merchant.model.MerchantContentProject
-import com.example.yunjing.ui.merchant.model.ParseMode
-import com.example.yunjing.ui.merchant.model.PendingMediaType
-import com.example.yunjing.ui.merchant.model.PendingUploadItem
-import com.example.yunjing.ui.merchant.model.ProjectModelItem
+import com.example.yunjing.ui.merchant.common.component.MiniChip
+import com.example.yunjing.ui.merchant.common.component.SheetActionItem
+import com.example.yunjing.ui.merchant.common.component.SoftCard
+import com.example.yunjing.ui.merchant.common.component.StatusBadge
+import com.example.yunjing.ui.merchant.content.model.MerchantContentProject
+import com.example.yunjing.ui.merchant.content.model.ParseMode
+import com.example.yunjing.ui.merchant.content.model.PendingMediaType
+import com.example.yunjing.ui.merchant.content.model.PendingUploadItem
+import com.example.yunjing.ui.merchant.content.model.ProjectModelItem
 import com.example.yunjing.ui.pressClick
+
+/**
+ * 本文件负责存放 merchant 内容库域专用的复用组件。
+ */
 
 @Composable
 fun ContentRow(

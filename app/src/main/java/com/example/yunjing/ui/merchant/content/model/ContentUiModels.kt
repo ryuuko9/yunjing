@@ -1,18 +1,10 @@
-package com.example.yunjing.ui.merchant.model
+package com.example.yunjing.ui.merchant.content.model
 
 import android.net.Uri
-import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * UI models
+ * 本文件用于集中定义内容库页面内部使用的 UI 状态模型与页面枚举。
  */
-
-data class MerchantTab(
-    val route: String,
-    val label: String,
-    val icon: ImageVector
-)
-
 data class MerchantQueueItem(
     val title: String,
     val subtitle: String
@@ -25,7 +17,8 @@ data class ContentItem(
 )
 
 enum class PendingMediaType {
-    IMAGE, VIDEO
+    IMAGE,
+    VIDEO
 }
 
 data class PendingUploadItem(
@@ -60,25 +53,19 @@ data class MerchantContentProject(
     val name: String,
     val status: String,
     val summary: String,
-
     val uploads: List<PendingUploadItem> = emptyList(),
-
     val selectedRebuildUris: List<String> = emptyList(),
-
     val parseMode: ParseMode = ParseMode.EXPLODED_GUIDE,
     val selectedParseSourceUris: List<String> = emptyList(),
     val parseModels: List<ProjectModelItem> = emptyList(),
     val selectedParseModelUris: List<String> = emptyList(),
-
     val isRebuilding: Boolean = false,
     val rebuildProgress: Float = 0f,
     val rebuildResult: RebuildResult? = null,
-
     val isParsing: Boolean = false,
     val parseProgress: Float = 0f,
-
     val explodedGuideResult: ParseResult? = null,
-    val videoGuideResult: ParseResult? = null,
+    val videoGuideResult: ParseResult? = null
 )
 
 enum class ContentPageState {
@@ -91,12 +78,3 @@ enum class ContentPageState {
     MODEL_FOLDER_SELECT_PARSE,
     MODEL_PREVIEW
 }
-data class RenameProjectRequest(
-    val projectName: String
-)
-
-data class ParseProjectRequest(
-    val parseMode: String,
-    val sourceAssetIds: List<Long>,
-    val modelIds: List<Long>
-)

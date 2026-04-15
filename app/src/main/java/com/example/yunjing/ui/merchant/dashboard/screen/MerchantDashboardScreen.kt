@@ -1,4 +1,4 @@
-package com.example.yunjing.ui.merchant.screen
+package com.example.yunjing.ui.merchant.dashboard.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -29,10 +29,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.yunjing.ui.merchant.component.PrimaryPillButton
-import com.example.yunjing.ui.merchant.component.QuickActionCard
-import com.example.yunjing.ui.merchant.component.SoftCard
+import com.example.yunjing.ui.merchant.common.component.PrimaryPillButton
+import com.example.yunjing.ui.merchant.common.component.QuickActionCard
+import com.example.yunjing.ui.merchant.common.component.SoftCard
 import com.example.yunjing.ui.pressClick
+
+/**
+ * 本文件负责展示 merchant 端工作台首页与项目概览列表。
+ */
 
 @Composable
 fun MerchantDashboardScreen(
@@ -41,6 +45,9 @@ fun MerchantDashboardScreen(
     projects: List<DashboardProjectItem>,
     onOpenProject: (Long) -> Unit
 ) {
+    /**
+     * 这个函数负责渲染 merchant 工作台首页，包括快捷操作和项目概览。
+     */
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -168,6 +175,9 @@ private fun DashboardProjectCard(
     project: DashboardProjectItem,
     onClick: () -> Unit
 ) {
+    /**
+     * 这个函数负责展示工作台中的单个项目卡片。
+     */
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -214,6 +224,9 @@ private fun DashboardProjectCard(
 private fun PublishBadge(
     text: String
 ) {
+    /**
+     * 这个函数负责根据发布状态渲染项目状态徽标。
+     */
     val isPublished = text == "已发布"
 
     Box(
@@ -242,6 +255,9 @@ private fun PublishBadge(
 }
 
 private fun buildProjectStatusText(project: DashboardProjectItem): String {
+    /**
+     * 这个函数负责根据项目状态拼接工作台摘要文案。
+     */
     return when {
         project.publishStatus == "PUBLISHED" -> "点击进入项目工作台 · 已发布"
         project.parseStatus == "COMPLETED" -> "点击进入项目工作台 · 解析完成，等待发布"

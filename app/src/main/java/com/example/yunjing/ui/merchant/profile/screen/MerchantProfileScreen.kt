@@ -1,4 +1,4 @@
-package com.example.yunjing.ui.merchant.screen
+package com.example.yunjing.ui.merchant.profile.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,20 +31,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.yunjing.ui.ProfileConfirmDialogs
-import com.example.yunjing.ui.merchant.component.DangerLogoutButton
-import com.example.yunjing.ui.merchant.component.MerchantAvatar
-import com.example.yunjing.ui.merchant.component.ProfileActionRow
-import com.example.yunjing.ui.merchant.component.ProfileEntryCard
-import com.example.yunjing.ui.merchant.component.SoftCard
-import com.example.yunjing.ui.merchant.component.merchantSoftBackground
+import com.example.yunjing.ui.merchant.common.component.MerchantAvatar
+import com.example.yunjing.ui.merchant.common.component.SoftCard
+import com.example.yunjing.ui.merchant.common.component.merchantSoftBackground
+import com.example.yunjing.ui.merchant.profile.component.DangerLogoutButton
+import com.example.yunjing.ui.merchant.profile.component.ProfileActionRow
+import com.example.yunjing.ui.merchant.profile.component.ProfileEntryCard
 
-// "我的"
+/**
+ * 本文件负责展示 merchant 端“我的”页面及账号相关操作入口。
+ */
 @Composable
 fun MerchantProfileScreen(
     username: String,
     onSwitchRole: () -> Unit,
     onLogout: () -> Unit
 ) {
+    /**
+     * 这个函数负责渲染 merchant 端个人页，并承接切换身份与退出登录操作。
+     */
     var showSwitchConfirm by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
 
