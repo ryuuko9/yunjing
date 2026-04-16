@@ -1104,7 +1104,6 @@ fun MerchantContentScreen(
                         Toast.makeText(context, "已创建项目：$name", Toast.LENGTH_SHORT).show()
                         viewModel.showCreateProjectDialog = false
                         viewModel.pageState = ContentPageState.PROJECT_LIST
-                        viewModel.loadProjects()
                     }
                 )
             }

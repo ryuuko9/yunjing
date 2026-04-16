@@ -35,10 +35,6 @@ class MerchantContentViewModel(
     private val repository: MerchantContentRepository
 ) : ViewModel() {
 
-    companion object {
-        private const val DEMO_USER_ID = 1L
-    }
-
     data class ProjectRuntimeState(
         val publishStatus: String = "待处理",
         val selectedRebuildAssetIds: List<Long> = emptyList(),
@@ -161,6 +157,8 @@ class MerchantContentViewModel(
     var previewModel by mutableStateOf<ProjectModelAssetDto?>(null)
         private set
 
+    private var currentUserId by mutableStateOf<Long?>(null)
+
     fun openModelPreview(model: ProjectModelAssetDto) {
         previewModel = model
         pageState = ContentPageState.MODEL_PREVIEW
@@ -171,16 +169,29 @@ class MerchantContentViewModel(
         pageState = ContentPageState.MODEL_FOLDER_MANAGE
     }
 
-    init {
-        loadProjects()
+    fun bindUser(userId: Long?) {
+        if (currentUserId == userId) return
+
+        currentUserId = userId
+        resetUserScopedState()
+
+        if (userId != null) {
+            loadProjects(userId)
+        }
     }
 
-    fun loadProjects(userId: Long = DEMO_USER_ID) {
+    fun loadProjects(userId: Long? = currentUserId) {
+        val resolvedUserId = userId ?: run {
+            errorMessage = "当前商家账号缺少用户 ID，请重新登录"
+            return
+        }
+
+        currentUserId = resolvedUserId
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
 
-            repository.listProjects(userId)
+            repository.listProjects(resolvedUserId)
                 .onSuccess { list ->
                     projects.clear()
                     projects.addAll(list)
@@ -205,9 +216,14 @@ class MerchantContentViewModel(
     fun createProject(
         name: String,
         desc: String? = null,
-        userId: Long = DEMO_USER_ID,
+        userId: Long? = currentUserId,
         onSuccess: (() -> Unit)? = null
     ) {
+        val resolvedUserId = userId ?: run {
+            errorMessage = "当前商家账号缺少用户 ID，请重新登录"
+            return
+        }
+
         val trimmed = name.trim()
 
         if (trimmed.isEmpty()) {
@@ -225,12 +241,12 @@ class MerchantContentViewModel(
             errorMessage = null
 
             repository.createProject(
-                userId = userId,
+                userId = resolvedUserId,
                 projectName = trimmed,
                 projectDesc = desc?.trim()?.takeIf { it.isNotBlank() }
             ).onSuccess { project ->
                 ensureRuntimeState(project.id)
-                loadProjects(userId)
+                loadProjects(resolvedUserId)
                 selectedProjectId = project.id
                 pageState = ContentPageState.PROJECT_DETAIL
                 loadProjectDetail(project.id)
@@ -249,6 +265,7 @@ class MerchantContentViewModel(
         newName: String,
         onSuccess: (() -> Unit)? = null
     ) {
+        val resolvedUserId = requireCurrentUserId() ?: return
         val trimmed = newName.trim()
 
         if (trimmed.isEmpty()) {
@@ -266,7 +283,7 @@ class MerchantContentViewModel(
             isLoading = true
             errorMessage = null
 
-            repository.renameProject(projectId, trimmed)
+            repository.renameProject(resolvedUserId, projectId, trimmed)
                 .onSuccess {
                     val index = projects.indexOfFirst { it.id == projectId }
                     if (index >= 0) {
@@ -296,11 +313,12 @@ class MerchantContentViewModel(
         projectId: Long,
         onSuccess: (() -> Unit)? = null
     ) {
+        val resolvedUserId = requireCurrentUserId() ?: return
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
 
-            repository.deleteProject(projectId)
+            repository.deleteProject(resolvedUserId, projectId)
                 .onSuccess {
                     projects.removeAll { it.id == projectId }
                     removeRuntimeState(projectId)
@@ -374,11 +392,12 @@ class MerchantContentViewModel(
     }
 
     fun loadProjectDetail(projectId: Long) {
+        val resolvedUserId = requireCurrentUserId() ?: return
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
 
-            repository.getProjectDetail(projectId)
+            repository.getProjectDetail(resolvedUserId, projectId)
                 .onSuccess { detail ->
                     currentProjectDetail = detail
                     ensureRuntimeState(detail.project.id)
@@ -412,6 +431,7 @@ class MerchantContentViewModel(
         uri: Uri,
         onSuccess: (() -> Unit)? = null
     ) {
+        val resolvedUserId = requireCurrentUserId() ?: return
         viewModelScope.launch {
             isUploading = true
             errorMessage = null
@@ -420,11 +440,12 @@ class MerchantContentViewModel(
 
             repository.uploadMedia(
                 context = context,
+                userId = resolvedUserId,
                 projectId = projectId,
                 assetType = assetType,
                 uri = uri
             ).onSuccess {
-                repository.getProjectDetail(projectId)
+                repository.getProjectDetail(resolvedUserId, projectId)
                     .onSuccess { detail ->
                         currentProjectDetail = detail
                         ensureRuntimeState(detail.project.id)
@@ -461,11 +482,12 @@ class MerchantContentViewModel(
         mediaId: Long,
         onSuccess: (() -> Unit)? = null
     ) {
+        val resolvedUserId = requireCurrentUserId() ?: return
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
 
-            repository.deleteMedia(projectId, mediaId)
+            repository.deleteMedia(resolvedUserId, projectId, mediaId)
                 .onSuccess {
                     currentMediaAssets.removeAll { it.id == mediaId }
                     removeLocalPreviewUri(mediaId)
@@ -501,10 +523,11 @@ class MerchantContentViewModel(
     }
 
     fun loadModels(projectId: Long) {
+        val resolvedUserId = requireCurrentUserId() ?: return
         viewModelScope.launch {
             errorMessage = null
 
-            repository.listModels(projectId)
+            repository.listModels(resolvedUserId, projectId)
                 .onSuccess { models ->
                     currentModelAssets.clear()
                     currentModelAssets.addAll(models)
@@ -569,6 +592,7 @@ class MerchantContentViewModel(
     }
 
     fun finishRebuild(projectId: Long) {
+        val resolvedUserId = requireCurrentUserId() ?: return
         val selectedAssetIds = runtimeStateOf(projectId).selectedRebuildAssetIds
 
         if (selectedAssetIds.isEmpty()) {
@@ -588,6 +612,7 @@ class MerchantContentViewModel(
             errorMessage = null
 
             repository.rebuildProject(
+                userId = resolvedUserId,
                 projectId = projectId,
                 sourceAssetIds = selectedAssetIds
             ).onSuccess { models ->
@@ -704,6 +729,7 @@ class MerchantContentViewModel(
     }
 
     fun finishParse(projectId: Long) {
+        val resolvedUserId = requireCurrentUserId() ?: return
         val state = runtimeStateOf(projectId)
 
         viewModelScope.launch {
@@ -711,6 +737,7 @@ class MerchantContentViewModel(
             errorMessage = null
 
             repository.parseProject(
+                userId = resolvedUserId,
                 projectId = projectId,
                 parseMode = state.parseMode.name,
                 sourceAssetIds = state.selectedParseSourceAssetIds,
@@ -756,13 +783,44 @@ class MerchantContentViewModel(
         errorMessage = null
     }
 
+    private fun requireCurrentUserId(): Long? {
+        val userId = currentUserId
+        if (userId == null) {
+            errorMessage = "当前商家账号缺少用户 ID，请重新登录"
+        }
+        return userId
+    }
+
+    private fun resetUserScopedState() {
+        projects.clear()
+        currentMediaAssets.clear()
+        currentModelAssets.clear()
+        projectMediaCountMap.clear()
+        projectModelCountMap.clear()
+        localPreviewUriMap.clear()
+        pendingLocalPreviewQueue.clear()
+        runtimeStates.clear()
+        selectedProjectId = null
+        currentProjectDetail = null
+        previewModel = null
+        pageState = ContentPageState.PROJECT_LIST
+        showEntrySheet = false
+        showCreateProjectDialog = false
+        showRenameProjectDialog = false
+        showDeleteProjectDialog = false
+        isUploading = false
+        isRebuilding = false
+        errorMessage = null
+    }
+
     fun publishProject(
         projectId: Long,
         onSuccess: () -> Unit = {}
     ) {
+        val resolvedUserId = requireCurrentUserId() ?: return
         viewModelScope.launch {
             runCatching {
-                repository.publishProject(projectId)
+                repository.publishProject(resolvedUserId, projectId)
             }.onSuccess { response ->
                 if (response.success && response.data != null) {
                     val updatedProject = response.data

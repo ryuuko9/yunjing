@@ -37,30 +37,35 @@ interface MerchantContentApi {
 
     @GET("api/merchant/projects/{projectId}")
     suspend fun getProjectDetail(
-        @Path("projectId") projectId: Long
+        @Path("projectId") projectId: Long,
+        @Query("userId") userId: Long
     ): Response<ApiResponse<MerchantProjectDetailDto>>
 
     @PUT("api/merchant/projects/{projectId}/rename")
     suspend fun renameProject(
         @Path("projectId") projectId: Long,
+        @Query("userId") userId: Long,
         @Body request: RenameProjectRequest
     ): retrofit2.Response<ApiResponse<Unit>>
 
     @DELETE("api/merchant/projects/{projectId}")
     suspend fun deleteProject(
-        @Path("projectId") projectId: Long
+        @Path("projectId") projectId: Long,
+        @Query("userId") userId: Long
     ): Response<ApiResponse<Unit>>
 
     @DELETE("api/merchant/projects/{projectId}/media/{mediaId}")
     suspend fun deleteMedia(
         @Path("projectId") projectId: Long,
-        @Path("mediaId") mediaId: Long
+        @Path("mediaId") mediaId: Long,
+        @Query("userId") userId: Long
     ): ApiResponse<Unit>
 
     @Multipart
     @POST("api/merchant/projects/{projectId}/media/upload")
     suspend fun uploadMedia(
         @Path("projectId") projectId: Long,
+        @Query("userId") userId: Long,
         @Part("assetType") assetType: RequestBody,
         @Part file: MultipartBody.Part
     ): Response<ApiResponse<UploadMediaResponse>>
@@ -68,28 +73,33 @@ interface MerchantContentApi {
     @POST("api/merchant/projects/{projectId}/rebuild")
     suspend fun rebuildProject(
         @Path("projectId") projectId: Long,
+        @Query("userId") userId: Long,
         @Body request: RebuildRequest
     ): Response<ApiResponse<List<ProjectModelAssetDto>>>
 
     @GET("api/merchant/projects/{projectId}/models")
     suspend fun listModels(
-        @Path("projectId") projectId: Long
+        @Path("projectId") projectId: Long,
+        @Query("userId") userId: Long
     ): Response<ApiResponse<List<ProjectModelAssetDto>>>
 
     @POST("api/merchant/projects/{projectId}/real-rebuild")
     suspend fun rebuild(
-        @Path("projectId") projectId: Long
+        @Path("projectId") projectId: Long,
+        @Query("userId") userId: Long
     ): ApiResponse<Unit>
 
     @POST("api/merchant/projects/{projectId}/parse")
     suspend fun parseProject(
         @Path("projectId") projectId: Long,
+        @Query("userId") userId: Long,
         @Body request: ParseProjectRequest
     ): ApiResponse<MerchantProjectDetailDto>
 
     @POST("api/merchant/projects/{projectId}/publish")
     suspend fun publishProject(
-        @Path("projectId") projectId: Long
+        @Path("projectId") projectId: Long,
+        @Query("userId") userId: Long
     ): ApiResponse<ProjectResponseDto>
 
     @GET("api/buyer/projects/{publishCode}")

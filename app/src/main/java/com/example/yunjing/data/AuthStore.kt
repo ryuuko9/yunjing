@@ -18,6 +18,8 @@ class AuthStore(private val ctx: Context) {
     private object Keys {
         val BUYER_ACCOUNT = stringPreferencesKey("buyer_account")
         val MERCHANT_ACCOUNT = stringPreferencesKey("merchant_account")
+        val BUYER_USER_ID = longPreferencesKey("buyer_user_id")
+        val MERCHANT_USER_ID = longPreferencesKey("merchant_user_id")
         val BUYER_LOGGED_IN = booleanPreferencesKey("buyer_logged_in")
         val MERCHANT_LOGGED_IN = booleanPreferencesKey("merchant_logged_in")
     }
@@ -29,16 +31,26 @@ class AuthStore(private val ctx: Context) {
         )
     }
 
-    suspend fun saveLogin(role: UserRole, account: String) {
+    suspend fun saveLogin(role: UserRole, account: String, userId: Long?) {
         ctx.authDataStore.edit { p ->
             when (role) {
                 UserRole.BUYER -> {
                     p[Keys.BUYER_ACCOUNT] = account
+                    if (userId != null) {
+                        p[Keys.BUYER_USER_ID] = userId
+                    } else {
+                        p.remove(Keys.BUYER_USER_ID)
+                    }
                     p[Keys.BUYER_LOGGED_IN] = true
                     p[Keys.MERCHANT_LOGGED_IN] = false
                 }
                 UserRole.MERCHANT -> {
                     p[Keys.MERCHANT_ACCOUNT] = account
+                    if (userId != null) {
+                        p[Keys.MERCHANT_USER_ID] = userId
+                    } else {
+                        p.remove(Keys.MERCHANT_USER_ID)
+                    }
                     p[Keys.MERCHANT_LOGGED_IN] = true
                     p[Keys.BUYER_LOGGED_IN] = false
                 }
@@ -49,8 +61,14 @@ class AuthStore(private val ctx: Context) {
     suspend fun logout(role: UserRole) {
         ctx.authDataStore.edit { p ->
             when (role) {
-                UserRole.BUYER -> p[Keys.BUYER_LOGGED_IN] = false
-                UserRole.MERCHANT -> p[Keys.MERCHANT_LOGGED_IN] = false
+                UserRole.BUYER -> {
+                    p[Keys.BUYER_LOGGED_IN] = false
+                    p.remove(Keys.BUYER_USER_ID)
+                }
+                UserRole.MERCHANT -> {
+                    p[Keys.MERCHANT_LOGGED_IN] = false
+                    p.remove(Keys.MERCHANT_USER_ID)
+                }
             }
         }
     }
@@ -60,6 +78,15 @@ class AuthStore(private val ctx: Context) {
             when (role) {
                 UserRole.BUYER -> p[Keys.BUYER_ACCOUNT] ?: "未登录"
                 UserRole.MERCHANT -> p[Keys.MERCHANT_ACCOUNT] ?: "未登录"
+            }
+        }
+    }
+
+    fun userIdFlow(role: UserRole): Flow<Long?> {
+        return ctx.authDataStore.data.map { p ->
+            when (role) {
+                UserRole.BUYER -> p[Keys.BUYER_USER_ID]
+                UserRole.MERCHANT -> p[Keys.MERCHANT_USER_ID]
             }
         }
     }

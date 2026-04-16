@@ -237,17 +237,30 @@ fun AuthScreen(
                                     try {
                                         val resp = authRepository.login(
                                             username = loginAccount.trim(),
-                                            password = loginPassword
+                                            password = loginPassword,
+                                            role = userRole
                                         )
 
                                         if (resp.success) {
                                             val backendRole = when (resp.role?.uppercase()) {
-                                                "MERCHANT" -> UserRole.MERCHANT
-                                                else -> UserRole.BUYER
+                                                UserRole.BUYER.name -> UserRole.BUYER
+                                                UserRole.MERCHANT.name -> UserRole.MERCHANT
+                                                else -> null
                                             }
 
-                                            roleStore.setRole(backendRole)
-                                            authStore.saveLogin(backendRole, resp.username ?: loginAccount.trim())
+                                            if (backendRole != null && backendRole != userRole) {
+                                                errorMsg = "当前入口为${if (isBuyer) "买家端" else "商家端"}，请切换到正确身份后登录"
+                                                return@launch
+                                            }
+
+                                            val finalRole = backendRole ?: userRole
+
+                                            roleStore.setRole(finalRole)
+                                            authStore.saveLogin(
+                                                role = finalRole,
+                                                account = resp.username ?: loginAccount.trim(),
+                                                userId = resp.userId
+                                            )
                                             onAuthSuccess()
                                         } else {
                                             errorMsg = resp.message.ifBlank { "账号或密码错误" }
@@ -390,7 +403,7 @@ fun AuthScreen(
                         AppCenterDialog(
                             visible = showRegisterSuccessDialog,
                             title = "注册成功",
-                            message = "账号已创建，请使用刚才的账号密码登录。",
+                            message = "账号已创建，请使用当前${if (isBuyer) "买家端" else "商家端"}入口登录。",
                             confirmText = "去登录",
                             cancelText = "稍后",
                             dismissOnClickOutside = false,

@@ -90,19 +90,26 @@ fun BuyerMainShell(
         .accountFlow(UserRole.BUYER)
         .collectAsState(initial = "未登录")
 
-    // 需要修改
-    val buyerUserId = DefaultBuyerUserId
+    val buyerUserId by authStore
+        .userIdFlow(UserRole.BUYER)
+        .collectAsState(initial = null)
 
     val tutorials = buyerTutorialViewModel.tutorials.map { it.toBuyerTutorialUi() }
     var selectedTutorial by remember { mutableStateOf<BuyerTutorialUi?>(null) }
+    val missingBuyerIdMessage = "当前买家账号缺少用户 ID，请重新登录"
     val openTutorialDetail: (BuyerTutorialUi) -> Unit = { tutorial ->
         selectedTutorial = tutorial
         innerNav.navigate(BuyerTutorialDetailRoute)
     }
-    val removeTutorial: (BuyerTutorialUi) -> Unit = { tutorial ->
+    val removeTutorial: (BuyerTutorialUi) -> Unit = removeTutorial@{ tutorial ->
+        val currentBuyerUserId = buyerUserId
+        if (currentBuyerUserId == null) {
+            context.showShortToast(missingBuyerIdMessage)
+            return@removeTutorial
+        }
         buyerTutorialViewModel.deleteTutorial(
             tutorialId = tutorial.id,
-            buyerUserId = buyerUserId,
+            buyerUserId = currentBuyerUserId,
             onSuccess = {
                 context.showShortToast("教程已移除")
                 selectedTutorial = null
@@ -111,8 +118,9 @@ fun BuyerMainShell(
         )
     }
 
-    LaunchedEffect(Unit) {
-        buyerTutorialViewModel.loadTutorials(buyerUserId)
+    LaunchedEffect(buyerUserId) {
+        val currentBuyerUserId = buyerUserId ?: return@LaunchedEffect
+        buyerTutorialViewModel.loadTutorials(currentBuyerUserId)
     }
 
     LaunchedEffect(buyerTutorialViewModel.errorMessage) {
@@ -134,11 +142,17 @@ fun BuyerMainShell(
             return
         }
 
+        val currentBuyerUserId = buyerUserId
+        if (currentBuyerUserId == null) {
+            context.showShortToast(missingBuyerIdMessage)
+            return
+        }
+
         buyerTutorialViewModel.importTutorial(
             publishCode = publishCode,
-            buyerUserId = buyerUserId,
+            buyerUserId = currentBuyerUserId,
             onSuccess = {
-                buyerTutorialViewModel.loadTutorials(buyerUserId)
+                buyerTutorialViewModel.loadTutorials(currentBuyerUserId)
                 context.showShortToast("已加入“我的教程”")
                 innerNav.navigateToBuyerTab(Destinations.BUYER_TUTORIAL)
             }
@@ -509,6 +523,3 @@ private const val BUYER_AI_PICK = "buyer_ai_pick"
 private const val BUYER_AI_CALL = "buyer_ai_call"
 private const val BUYER_AI_CALL_ARG = "videoId"
 private const val BuyerTutorialDetailRoute = "buyer_tutorial_detail"
-
-// 需要修改
-private const val DefaultBuyerUserId = 1L

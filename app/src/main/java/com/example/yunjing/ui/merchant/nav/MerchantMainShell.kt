@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -57,6 +58,14 @@ fun MerchantMainShell(
     val username by authStore
         .accountFlow(UserRole.MERCHANT)
         .collectAsState(initial = "未登录")
+
+    val merchantUserId by authStore
+        .userIdFlow(UserRole.MERCHANT)
+        .collectAsState(initial = null)
+
+    LaunchedEffect(merchantUserId) {
+        contentViewModel.bindUser(merchantUserId)
+    }
 
     val navBackStackEntry by innerNav.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination

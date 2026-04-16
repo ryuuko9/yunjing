@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.yunjing.ui.buyer.model.BuyerTutorialDto
 import com.example.yunjing.ui.buyer.repository.BuyerTutorialRepository
 import com.example.yunjing.ui.merchant.model.ApiResponse
+import com.example.yunjing.ui.merchant.model.MerchantProjectDto
 import kotlinx.coroutines.launch
 
 class BuyerTutorialViewModel(
@@ -40,6 +41,18 @@ class BuyerTutorialViewModel(
         onSuccess: (() -> Unit)? = null
     ) {
         launchRequest(defaultErrorMessage = "导入教程失败") {
+            val projectResponse = repository.getPublishedProject(publishCode)
+            val projectDetail = projectResponse.data
+            if (!projectResponse.success || projectDetail == null) {
+                errorMessage = projectResponse.message.ifBlank { "当前项目已删除或已下线，二维码已失效" }
+                return@launchRequest
+            }
+
+            if (!projectDetail.project.isImportableForBuyer()) {
+                errorMessage = "当前项目已删除或已下线，二维码已失效"
+                return@launchRequest
+            }
+
             val response = repository.importTutorial(publishCode, buyerUserId)
             handleRequiredDataResponse(response, fallbackErrorMessage = "导入教程失败") { item ->
                 val index = tutorials.indexOfFirst { it.id == item.id }
@@ -108,5 +121,15 @@ class BuyerTutorialViewModel(
         }
 
         errorMessage = response.message.ifBlank { fallbackErrorMessage }
+    }
+
+    private fun MerchantProjectDto.isImportableForBuyer(): Boolean {
+        val normalizedPublishStatus = publishStatus.trim().uppercase()
+        if (normalizedPublishStatus != "PUBLISHED") {
+            return false
+        }
+
+        val normalizedStatus = status.trim().uppercase()
+        return normalizedStatus !in setOf("DELETED", "REMOVED", "ARCHIVED", "INACTIVE")
     }
 }

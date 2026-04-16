@@ -58,16 +58,17 @@ class MerchantContentRepository(
         }
     }
 
-    suspend fun getProjectDetail(projectId: Long): Result<MerchantProjectDetailDto> = withContext(Dispatchers.IO) {
+    suspend fun getProjectDetail(userId: Long, projectId: Long): Result<MerchantProjectDetailDto> = withContext(Dispatchers.IO) {
         runCatching {
-            val response = api.getProjectDetail(projectId)
+            val response = api.getProjectDetail(projectId, userId)
             unwrapBody(response, "获取项目详情失败")
         }
     }
-    suspend fun renameProject(projectId: Long, newName: String): Result<Unit> {
+    suspend fun renameProject(userId: Long, projectId: Long, newName: String): Result<Unit> {
         return try {
             val response = api.renameProject(
                 projectId,
+                userId,
                 RenameProjectRequest(projectName = newName)
             )
 
@@ -96,15 +97,16 @@ class MerchantContentRepository(
         }
     }
 
-    suspend fun deleteProject(projectId: Long): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun deleteProject(userId: Long, projectId: Long): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            val response = api.deleteProject(projectId)
+            val response = api.deleteProject(projectId, userId)
             unwrapUnit(response, "删除项目失败")
         }
     }
 
     suspend fun uploadMedia(
         context: Context,
+        userId: Long,
         projectId: Long,
         assetType: String,
         uri: Uri
@@ -119,6 +121,7 @@ class MerchantContentRepository(
 
                 val response = api.uploadMedia(
                     projectId = projectId,
+                    userId = userId,
                     assetType = assetTypeBody,
                     file = part
                 )
@@ -134,30 +137,32 @@ class MerchantContentRepository(
     }
 
     suspend fun rebuildProject(
+        userId: Long,
         projectId: Long,
         sourceAssetIds: List<Long>? = null
     ): Result<List<ProjectModelAssetDto>> = withContext(Dispatchers.IO) {
         runCatching {
             val response = api.rebuildProject(
                 projectId = projectId,
+                userId = userId,
                 request = RebuildRequest(sourceAssetIds)
             )
             unwrapBody(response, "模型重建失败")
         }
     }
 
-    suspend fun rebuild(projectId: Long): Result<Unit> {
+    suspend fun rebuild(userId: Long, projectId: Long): Result<Unit> {
         return runCatching {
-            val resp = api.rebuild(projectId)
+            val resp = api.rebuild(projectId, userId)
             if (!resp.success) {
                 throw IllegalStateException(resp.message.ifBlank { "模型重建失败" })
             }
         }
     }
 
-    suspend fun listModels(projectId: Long): Result<List<ProjectModelAssetDto>> = withContext(Dispatchers.IO) {
+    suspend fun listModels(userId: Long, projectId: Long): Result<List<ProjectModelAssetDto>> = withContext(Dispatchers.IO) {
         runCatching {
-            val response = api.listModels(projectId)
+            val response = api.listModels(projectId, userId)
             unwrapBody(response, "获取模型列表失败")
         }
     }
@@ -193,11 +198,12 @@ class MerchantContentRepository(
     }
 
     suspend fun deleteMedia(
+        userId: Long,
         projectId: Long,
         mediaId: Long
     ): Result<Unit> {
         return try {
-            val response = api.deleteMedia(projectId, mediaId)
+            val response = api.deleteMedia(projectId, mediaId, userId)
 
             if (response.success) {
                 Result.success(Unit)
@@ -265,6 +271,7 @@ class MerchantContentRepository(
     }
 
     suspend fun parseProject(
+        userId: Long,
         projectId: Long,
         parseMode: String,
         sourceAssetIds: List<Long>,
@@ -273,6 +280,7 @@ class MerchantContentRepository(
         return try {
             val response = api.parseProject(
                 projectId = projectId,
+                userId = userId,
                 request = ParseProjectRequest(
                     parseMode = parseMode,
                     sourceAssetIds = sourceAssetIds,
@@ -297,7 +305,7 @@ class MerchantContentRepository(
         }
     }
 
-    suspend fun publishProject(projectId: Long): ApiResponse<ProjectResponseDto> {
-        return api.publishProject(projectId)
+    suspend fun publishProject(userId: Long, projectId: Long): ApiResponse<ProjectResponseDto> {
+        return api.publishProject(projectId, userId)
     }
 }

@@ -2,7 +2,8 @@ package com.example.yunjing.data
 
 data class LoginRequest(
     val username: String,
-    val password: String
+    val password: String,
+    val role: String
 )
 
 data class RegisterRequest(
