@@ -41,6 +41,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.yunjing.network.AppServerConfig
 import com.example.yunjing.ui.merchant.model.ProjectMediaAssetDto
 
 /**
@@ -203,21 +204,7 @@ fun BackendMediaPreviewDialog(
  * 这个函数负责把后端返回的图片地址规范化为模拟器可访问的预览地址。
  */
 fun normalizePreviewUrl(rawUrl: String?): String? {
-    if (rawUrl.isNullOrBlank()) return null
-
-    return when {
-        rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
-            rawUrl.replace("localhost", "10.0.2.2")
-//            rawUrl.replace("localhost", "172.20.10.3")
-        }
-
-        rawUrl.startsWith("/") -> {
-            "http://10.0.2.2:8080$rawUrl"
-//            "http://172.20.10.3:8080$rawUrl"
-        }
-
-        else -> rawUrl
-    }
+    return AppServerConfig.normalizeBackendUrl(rawUrl)
 }
 
 /**

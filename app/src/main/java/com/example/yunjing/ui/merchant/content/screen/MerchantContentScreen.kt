@@ -67,6 +67,9 @@ import com.example.yunjing.ui.merchant.content.model.ContentPageState
 import com.example.yunjing.ui.merchant.content.model.MerchantContentProject
 import com.example.yunjing.ui.merchant.content.model.ParseMode
 import com.example.yunjing.ui.merchant.content.viewmodel.MerchantContentViewModel
+import com.example.yunjing.ui.merchant.model.hasParseResult
+import com.example.yunjing.ui.merchant.model.hasRebuildResult
+import com.example.yunjing.ui.merchant.model.isPublishedStatus
 import com.example.yunjing.ui.merchant.model.ProjectMediaAssetDto
 import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
 import com.example.yunjing.ui.pressClick
@@ -75,10 +78,17 @@ import com.example.yunjing.ui.unity.createUnityPlayerIntent
 import kotlinx.coroutines.delay
 
 /**
+ * 商家内容工作台主入口，负责串联项目详情、素材管理、重建、解析和发布流程。
+ */
+
+/**
  * 本文件负责作为 merchant 内容库页面的主入口，统一处理状态读取、事件调度和页面分发。
  */
 
 @Composable
+/**
+ * 渲染商家内容工作台，并维护跨页面共享的上传、预览和流程状态。
+ */
 fun MerchantContentScreen(
     viewModel: MerchantContentViewModel,
     initialProjectId: Long? = null
@@ -392,10 +402,13 @@ fun MerchantContentScreen(
                 val tutorialVideoUrl = detailProject?.tutorialVideoUrl
                 val tutorialTitle = detailProject?.tutorialTitle
                 val parseResultText = detailProject?.parseResultText
-                val canPublish =
-                    (detailProject?.hasRebuildOutput == 1) ||
-                            !explodedImageUrl.isNullOrBlank() ||
-                            !tutorialVideoUrl.isNullOrBlank()
+                val canPublish = hasRebuildResult(
+                    hasRebuildOutput = detailProject?.hasRebuildOutput,
+                    rebuildStatus = detailProject?.rebuildStatus
+                ) || hasParseResult(
+                    explodedImageUrl = explodedImageUrl,
+                    tutorialVideoUrl = tutorialVideoUrl
+                )
 
                 LazyColumn(
                     state = projectDetailListState,
@@ -434,7 +447,7 @@ fun MerchantContentScreen(
                         Spacer(Modifier.height(6.dp))
                         Text(
                             "${currentProject.projectDesc ?: "项目内容工作台"} · ${
-                                if (currentProject.publishStatus == "PUBLISHED") "已发布" else runtime.publishStatus
+                                if (isPublishedStatus(currentProject.publishStatus)) "已发布" else runtime.publishStatus
                             }",
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -743,7 +756,7 @@ fun MerchantContentScreen(
 
                         PrimaryPillButton(
                             text = if (canPublish) {
-                                if (currentProject.publishStatus == "PUBLISHED") "重新生成发布二维码" else "发布当前项目"
+                                if (isPublishedStatus(currentProject.publishStatus)) "重新生成发布二维码" else "发布当前项目"
                             } else {
                                 "发布当前项目（需先生成结果）"
                             },
@@ -1210,3 +1223,4 @@ fun MerchantContentScreen(
         )
     }
 }
+

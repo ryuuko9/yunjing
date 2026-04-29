@@ -30,7 +30,13 @@ import com.example.yunjing.ui.buyer.BuyerMainShell
 import com.example.yunjing.ui.buyer.repository.BuyerTutorialRepository
 import com.example.yunjing.ui.buyer.viewmodel.BuyerTutorialViewModel
 import com.example.yunjing.ui.merchant.nav.MerchantMainShell
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+
+private sealed class GateLoadState<out T> {
+    object Loading : GateLoadState<Nothing>()
+    data class Ready<T>(val value: T) : GateLoadState<T>()
+}
 
 @Composable
 fun AppNav() {
@@ -45,15 +51,26 @@ fun AppNav() {
 
         // 0) 启动分流：自动决定去 ROLE / AUTH / MAIN
         composable(Destinations.GATE) {
-            val role by roleStore.roleFlow.collectAsState(initial = null)
-            val session by authStore.sessionFlow.collectAsState(
-                initial = SessionState(buyerLoggedIn = false, merchantLoggedIn = false)
-            )
+            val roleState by remember(roleStore) {
+                roleStore.roleFlow.map<UserRole?, GateLoadState<UserRole?>> { GateLoadState.Ready(it) }
+            }.collectAsState(initial = GateLoadState.Loading)
+            val sessionState by remember(authStore) {
+                authStore.sessionFlow.map<SessionState, GateLoadState<SessionState>> { GateLoadState.Ready(it) }
+            }.collectAsState(initial = GateLoadState.Loading)
 
             // 用“目标路由判重”
             var lastTarget by remember { mutableStateOf<String?>(null) }
 
-            LaunchedEffect(role, session) {
+            LaunchedEffect(roleState, sessionState) {
+                val role = when (val state = roleState) {
+                    GateLoadState.Loading -> return@LaunchedEffect
+                    is GateLoadState.Ready -> state.value
+                }
+                val session = when (val state = sessionState) {
+                    GateLoadState.Loading -> return@LaunchedEffect
+                    is GateLoadState.Ready -> state.value
+                }
+
                 val target = when (role) {
                     null -> Destinations.ROLE
 
@@ -111,7 +128,15 @@ fun AppNav() {
 
             AuthScreen(
                 role = roleStr,
-                onBack = { nav.popBackStack() },
+                onBack = {
+                    scope.launch {
+                        roleStore.clearRole()
+                        nav.navigate(Destinations.GATE) {
+                            popUpTo(Destinations.AUTH_ROUTE) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                },
                 onAuthSuccess = {
                     nav.navigate(Destinations.GATE) {
                         popUpTo(Destinations.AUTH_ROUTE) { inclusive = true }

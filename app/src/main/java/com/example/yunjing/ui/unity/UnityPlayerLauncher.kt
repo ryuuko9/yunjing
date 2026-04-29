@@ -3,6 +3,7 @@ package com.example.yunjing.ui.unity
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import com.example.yunjing.network.AppServerConfig
 import com.demo.picker.PickerUnityActivity
 
 const val EXTRA_PUBLISH_CODE = "publishCode"
@@ -10,19 +11,7 @@ const val EXTRA_TUTORIAL_VIDEO_URL = "tutorialVideoUrl"
 const val EXTRA_TUTORIAL_TITLE = "tutorialTitle"
 
 fun normalizeBackendMediaUrl(rawUrl: String?): String? {
-    if (rawUrl.isNullOrBlank()) return null
-
-    return when {
-        rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> {
-            rawUrl.replace("localhost", "10.0.2.2")
-        }
-
-        rawUrl.startsWith("/") -> {
-            "http://10.0.2.2:8080$rawUrl"
-        }
-
-        else -> rawUrl
-    }
+    return AppServerConfig.normalizeBackendUrl(rawUrl)
 }
 
 fun Context.createUnityPlayerIntent(

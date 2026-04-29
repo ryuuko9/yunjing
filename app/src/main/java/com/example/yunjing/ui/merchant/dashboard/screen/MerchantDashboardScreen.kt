@@ -32,12 +32,14 @@ import androidx.compose.ui.unit.sp
 import com.example.yunjing.ui.merchant.common.component.PrimaryPillButton
 import com.example.yunjing.ui.merchant.common.component.QuickActionCard
 import com.example.yunjing.ui.merchant.common.component.SoftCard
+import com.example.yunjing.ui.merchant.model.hasRebuildResult
+import com.example.yunjing.ui.merchant.model.isCompletedStatus
+import com.example.yunjing.ui.merchant.model.isPublishedStatus
 import com.example.yunjing.ui.pressClick
 
 /**
- * 本文件负责展示 merchant 端工作台首页与项目概览列表。
+ * 商家首页工作台，负责展示协助入口和项目概览卡片。
  */
-
 @Composable
 fun MerchantDashboardScreen(
     onGoAssist: () -> Unit,
@@ -45,9 +47,6 @@ fun MerchantDashboardScreen(
     projects: List<DashboardProjectItem>,
     onOpenProject: (Long) -> Unit
 ) {
-    /**
-     * 这个函数负责渲染 merchant 工作台首页，包括快捷操作和项目概览。
-     */
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -108,7 +107,7 @@ fun MerchantDashboardScreen(
         ) {
             QuickActionCard(
                 title = "上传内容",
-                desc = "说明书\n教程视频",
+                desc = "素材与教程视频",
                 icon = Icons.Filled.UploadFile,
                 onClick = onGoContent,
                 modifier = Modifier.weight(1f)
@@ -116,7 +115,7 @@ fun MerchantDashboardScreen(
 
             QuickActionCard(
                 title = "数据看板",
-                desc = "成功率/耗时\n退货关联",
+                desc = "成功率、耗时\n退货关联",
                 icon = Icons.Filled.Analytics,
                 onClick = {},
                 modifier = Modifier.weight(1f)
@@ -170,14 +169,14 @@ fun MerchantDashboardScreen(
     }
 }
 
+/**
+ * 渲染单个项目概览卡片，并根据项目状态展示简要进度。
+ */
 @Composable
 private fun DashboardProjectCard(
     project: DashboardProjectItem,
     onClick: () -> Unit
 ) {
-    /**
-     * 这个函数负责展示工作台中的单个项目卡片。
-     */
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -186,9 +185,7 @@ private fun DashboardProjectCard(
             .padding(horizontal = 14.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = project.projectName,
                 fontSize = 15.sp,
@@ -207,7 +204,8 @@ private fun DashboardProjectCard(
         Spacer(Modifier.width(12.dp))
 
         PublishBadge(
-            text = if (project.publishStatus == "PUBLISHED") "已发布" else "未发布"
+            text = if (isPublishedStatus(project.publishStatus)) "已发布" else "未发布",
+            isPublished = isPublishedStatus(project.publishStatus)
         )
 
         Spacer(Modifier.width(10.dp))
@@ -220,15 +218,14 @@ private fun DashboardProjectCard(
     }
 }
 
+/**
+ * 展示项目发布状态标签，不参与业务判断。
+ */
 @Composable
 private fun PublishBadge(
-    text: String
+    text: String,
+    isPublished: Boolean
 ) {
-    /**
-     * 这个函数负责根据发布状态渲染项目状态徽标。
-     */
-    val isPublished = text == "已发布"
-
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
@@ -254,19 +251,22 @@ private fun PublishBadge(
     }
 }
 
+/**
+ * 根据项目当前状态生成首页卡片摘要文案。
+ */
 private fun buildProjectStatusText(project: DashboardProjectItem): String {
-    /**
-     * 这个函数负责根据项目状态拼接工作台摘要文案。
-     */
     return when {
-        project.publishStatus == "PUBLISHED" -> "点击进入项目工作台 · 已发布"
-        project.parseStatus == "COMPLETED" -> "点击进入项目工作台 · 解析完成，等待发布"
-        project.hasRebuildOutput == 1 || project.rebuildStatus == "COMPLETED" -> "点击进入项目工作台 · 已重建，等待解析"
+        isPublishedStatus(project.publishStatus) -> "点击进入项目工作台 · 已发布"
+        isCompletedStatus(project.parseStatus) -> "点击进入项目工作台 · 解析完成，等待发布"
+        hasRebuildResult(project.hasRebuildOutput, project.rebuildStatus) -> "点击进入项目工作台 · 已重建，等待解析"
         project.hasUploadedAssets -> "点击进入项目工作台 · 已上传，等待重建"
         else -> "点击进入项目工作台 · 等待上传素材"
     }
 }
 
+/**
+ * 商家首页项目概览所需的轻量数据结构。
+ */
 data class DashboardProjectItem(
     val id: Long,
     val projectName: String,

@@ -28,14 +28,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.yunjing.network.AppServerConfig
 import com.example.yunjing.ui.merchant.common.component.MiniChip
 import com.example.yunjing.ui.merchant.model.ProjectModelAssetDto
 import com.google.android.filament.LightManager
 import io.github.sceneview.Scene
 import io.github.sceneview.math.Position
 import io.github.sceneview.model.ModelInstance
-import io.github.sceneview.node.LightNode
-import io.github.sceneview.node.ModelNode
 import io.github.sceneview.rememberCameraManipulator
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironment
@@ -231,26 +230,5 @@ fun ModelPreviewContent(
  * 这个函数负责把模型地址转换为模拟器和本地环境都可访问的统一地址。
  */
 fun normalizeModelUrl(rawUrl: String?): String? {
-    val value = rawUrl?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-
-    return when {
-        value.startsWith("http://", ignoreCase = true) ||
-            value.startsWith("https://", ignoreCase = true) -> {
-            value
-                .replace("localhost", "10.0.2.2")
-                .replace("127.0.0.1", "10.0.2.2")
-//                .replace("localhost", "172.20.10.3")
-//                .replace("127.0.0.1", "172.20.10.3")
-        }
-
-        value.startsWith("/") -> {
-            "http://10.0.2.2:8080$value"
-//            "http://172.20.10.3:8080$value"
-        }
-
-        else -> {
-            "http://10.0.2.2:8080$value"
-//            "http://172.20.10.3:8080/$value"
-        }
-    }
+    return AppServerConfig.normalizeBackendUrl(rawUrl)
 }

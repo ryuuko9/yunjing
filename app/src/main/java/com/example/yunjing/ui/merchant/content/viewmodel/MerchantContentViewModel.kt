@@ -12,6 +12,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.yunjing.ui.merchant.content.model.ContentPageState
 import com.example.yunjing.ui.merchant.content.model.ParseMode
 import com.example.yunjing.ui.merchant.content.repository.MerchantContentRepository
+import com.example.yunjing.ui.merchant.model.hasParseResult
+import com.example.yunjing.ui.merchant.model.isPublishedStatus
 import com.example.yunjing.ui.merchant.model.MerchantProjectDetailDto
 import com.example.yunjing.ui.merchant.model.MerchantProjectDto
 import com.example.yunjing.ui.merchant.model.ProjectMediaAssetDto
@@ -357,6 +359,9 @@ class MerchantContentViewModel(
         currentModelAssets.clear()
     }
 
+    /**
+     * 根据项目当前的发布、解析、重建和素材情况推导工作台阶段。
+     */
     fun deriveStage(projectId: Long): LibraryStage {
         val runtime = runtimeStateOf(projectId)
         val imageCount = projectMediaCountMap[projectId] ?: 0
@@ -364,10 +369,10 @@ class MerchantContentViewModel(
         val project = projects.firstOrNull { it.id == projectId }
 
         return when {
-            project?.publishStatus == "PUBLISHED" || runtime.publishStatus == "已发布" -> LibraryStage.PUBLISHED
+            isPublishedStatus(project?.publishStatus) -> LibraryStage.PUBLISHED
+            runtime.publishStatus == "已发布" -> LibraryStage.PUBLISHED
 
-            !project?.explodedImageUrl.isNullOrBlank() ||
-                    !project?.tutorialVideoUrl.isNullOrBlank() -> LibraryStage.READY
+            hasParseResult(project?.explodedImageUrl, project?.tutorialVideoUrl) -> LibraryStage.READY
 
             runtime.realParsing -> LibraryStage.PENDING_PARSE
 
@@ -381,6 +386,9 @@ class MerchantContentViewModel(
         }
     }
 
+    /**
+     * 把阶段枚举转换成页面展示文案。
+     */
     fun stageLabel(projectId: Long): String {
         return when (deriveStage(projectId)) {
             LibraryStage.PENDING_UPLOAD -> "待上传"
@@ -845,3 +853,4 @@ class MerchantContentViewModel(
         }
     }
 }
+

@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import com.example.yunjing.network.AppServerConfig
 import com.example.yunjing.ui.buyer.model.BuyerTutorialDto
 import com.example.yunjing.ui.pressClick
 import com.example.yunjing.ui.unity.canOpenUnityPlayer
@@ -41,6 +42,10 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import kotlin.math.max
+
+/**
+ * 买家教程模块公共支持文件，负责教程数据归一化、扫码解析和资源预览辅助逻辑。
+ */
 
 /**
  * 文件作用：
@@ -64,29 +69,36 @@ internal data class BuyerTutorialUi(
     val addedAtText: String
 )
 
-private const val BuyerPreviewHost = "172.20.10.3"
-private const val BuyerPreviewPort = 8080
-
 /**
  * 作用：
  * 统一修正教程资源预览地址，兼容本地服务地址和相对路径。
  */
 private fun normalizeBuyerPreviewUrl(rawUrl: String?): String? {
-    val normalizedUrl = rawUrl?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    return AppServerConfig.normalizeBackendUrl(rawUrl)
+}
 
-    return when {
-        normalizedUrl.startsWith("http://") || normalizedUrl.startsWith("https://") -> {
-                        rawUrl.replace("localhost", "10.0.2.2")
-//            normalizedUrl.replace("localhost", BuyerPreviewHost)
-        }
+/**
+ * 把空白文本折叠为 null，避免页面层到处 trim 和判空。
+ */
+private fun String?.normalizeBuyerText(): String? {
+    return this?.trim()?.takeIf { it.isNotEmpty() }
+}
 
-        normalizedUrl.startsWith("/") -> {
-                        "http://10.0.2.2:8080$rawUrl"
-//            "http://$BuyerPreviewHost:$BuyerPreviewPort$normalizedUrl"
-        }
-
-        else -> normalizedUrl
+/**
+ * 优先使用后端返回的买家访问地址，缺失时回退到基于发布码拼接的标准地址。
+ */
+private fun resolveBuyerPublishUrl(publishCode: String, publishUrl: String?): String? {
+    val normalizedPublishUrl = AppServerConfig.normalizeBackendUrl(publishUrl)
+    if (normalizedPublishUrl != null) {
+        return normalizedPublishUrl
     }
+
+    val normalizedPublishCode = publishCode.trim()
+    if (normalizedPublishCode.isEmpty()) {
+        return null
+    }
+
+    return AppServerConfig.normalizeBackendUrl("/api/buyer/projects/$normalizedPublishCode")
 }
 
 /**
@@ -244,16 +256,21 @@ internal fun extractPublishCodeFromScan(raw: String?): String? {
  * 作用：
  * 将接口返回的 BuyerTutorialDto 转换为页面直接使用的 BuyerTutorialUi。
  */
+/**
+ * 把后端教程数据转换成页面稳定消费的 UI 模型，并补齐快照缺失时的兜底字段。
+ */
 internal fun BuyerTutorialDto.toBuyerTutorialUi(): BuyerTutorialUi {
+    val normalizedTutorialName = tutorialName.trim()
+    val normalizedTutorialTitle = tutorialTitle.normalizeBuyerText() ?: normalizedTutorialName
     return BuyerTutorialUi(
         id = id,
         publishCode = publishCode,
-        tutorialName = tutorialName,
-        projectDesc = projectDesc,
+        tutorialName = normalizedTutorialName,
+        projectDesc = projectDesc.normalizeBuyerText(),
         explodedImageUrl = normalizeBuyerPreviewUrl(explodedImageUrl),
-        tutorialVideoUrl = tutorialVideoUrl,
-        tutorialTitle = tutorialTitle,
-        publishUrl = publishUrl,
+        tutorialVideoUrl = normalizeBuyerPreviewUrl(tutorialVideoUrl),
+        tutorialTitle = normalizedTutorialTitle,
+        publishUrl = resolveBuyerPublishUrl(publishCode, publishUrl),
         addedAtText = addedAt ?: "刚刚导入"
     )
 }
