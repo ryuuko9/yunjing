@@ -2,6 +2,7 @@ package com.example.yunjing.ui.buyer.network
 
 import com.example.yunjing.ui.buyer.model.BuyerTutorialDto
 import com.example.yunjing.ui.merchant.model.ApiResponse
+import com.example.yunjing.ui.merchant.model.MerchantProjectDetailDto
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -9,6 +10,11 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface BuyerApiService {
+    @GET("api/buyer/projects/{publishCode}")
+    suspend fun getPublishedProject(
+        @Path("publishCode") publishCode: String
+    ): ApiResponse<MerchantProjectDetailDto>
+
     @POST("api/buyer/tutorials/import/{publishCode}")
     suspend fun importTutorial(
         @Path("publishCode") publishCode: String,

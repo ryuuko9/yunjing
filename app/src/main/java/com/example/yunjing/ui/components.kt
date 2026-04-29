@@ -1,50 +1,60 @@
 package com.example.yunjing.ui
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
-import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.Dp
-import androidx.compose.foundation.background
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 
 @Composable
 fun AppTopBar(
@@ -53,15 +63,12 @@ fun AppTopBar(
     actions: @Composable RowScope.() -> Unit = {},
     logoResId: Int? = null
 ) {
-    // 自定义 Header，完全控制左边距，不受 TopAppBar inset 影响
     Surface(color = MaterialTheme.colorScheme.background) {
         Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    // “靠左” 把 start 调小即可
                     .padding(start = 12.dp, end = 12.dp)
-                    // 顶部留给状态栏一点空间（透明状态栏）
                     .padding(top = 30.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -95,7 +102,11 @@ fun AppTopBar(
                 Row(content = actions)
             }
 
-            Divider(color = MaterialTheme.colorScheme.outline)
+            HorizontalDivider(
+                Modifier,
+                DividerDefaults.Thickness,
+                color = MaterialTheme.colorScheme.outline
+            )
         }
     }
 }
@@ -243,7 +254,7 @@ fun Modifier.pressClick(
             scaleX = scale
             scaleY = scale
         }
-        // 按下瞬间就把 down = true（更跟手）
+        // 按下瞬间就把 down = true
         .pointerInput(enabled) {
             if (!enabled) return@pointerInput
             awaitPointerEventScope {
@@ -275,8 +286,8 @@ fun ProfileConfirmDialogs(
     onDismissLogout: () -> Unit,
     onConfirmSwitch: () -> Unit,
     onConfirmLogout: () -> Unit,
-    roleName: String, // "买家" / "商家"
-    username: String? = null // 可选：显示账号，减少误操作
+    roleName: String,
+    username: String? = null
 ) {
     AppCenterDialog(
         visible = showSwitchConfirm,
@@ -317,7 +328,7 @@ fun AppCenterDialog(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
     dismissOnBackPress: Boolean = true,
-    dismissOnClickOutside: Boolean = false  // 禁止点空白关闭
+    dismissOnClickOutside: Boolean = false
 ) {
     if (!visible) return
 
@@ -328,7 +339,7 @@ fun AppCenterDialog(
         properties = DialogProperties(
             dismissOnBackPress = dismissOnBackPress,
             dismissOnClickOutside = dismissOnClickOutside,
-            usePlatformDefaultWidth = false // 更窄，不卡满
+            usePlatformDefaultWidth = false
         )
     ) {
         // 外面留白 + 居中小卡片
@@ -380,7 +391,7 @@ fun AppCenterDialog(
                                 .height(44.dp)
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
-                                .pressClick { onCancel() }, // 只有按钮有按压动效
+                                .pressClick { onCancel() },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -393,14 +404,14 @@ fun AppCenterDialog(
                             )
                         }
 
-                        // 确认（主色）
+                        // 确认
                         Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(44.dp)
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.95f))
-                                .pressClick { onConfirm() }, // 只有按钮有按压动效
+                                .pressClick { onConfirm() },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(

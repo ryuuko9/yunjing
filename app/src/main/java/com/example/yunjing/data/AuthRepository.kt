@@ -2,9 +2,13 @@ package com.example.yunjing.data
 
 class AuthRepository {
 
-    suspend fun login(username: String, password: String): AuthResponse {
+    suspend fun login(username: String, password: String, role: UserRole): AuthResponse {
         val response = RetrofitClient.api.login(
-            LoginRequest(username = username, password = password)
+            LoginRequest(
+                username = username,
+                password = password,
+                role = role.name
+            )
         )
         return response.body() ?: AuthResponse(false, "服务器返回为空", null, null, null, null)
     }

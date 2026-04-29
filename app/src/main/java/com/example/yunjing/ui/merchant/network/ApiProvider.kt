@@ -1,14 +1,12 @@
 package com.example.yunjing.ui.merchant.network
 
+import com.example.yunjing.network.AppServerConfig
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiProvider {
-
-    private const val BASE_URL = "http://10.0.2.2:8080/"
-//    private const val BASE_URL = "http://172.20.10.3:8080/"
 
     private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
@@ -20,7 +18,7 @@ object ApiProvider {
 
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(AppServerConfig.backendBaseUrl)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

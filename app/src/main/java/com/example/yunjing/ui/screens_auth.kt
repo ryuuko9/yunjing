@@ -2,44 +2,67 @@ package com.example.yunjing.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.yunjing.R
-import androidx.compose.ui.platform.LocalContext
-import com.example.yunjing.data.AuthStore
-import com.example.yunjing.data.UserRole
-import kotlinx.coroutines.launch
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withStyle
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import com.example.yunjing.data.AuthRepository
+import com.example.yunjing.data.AuthStore
 import com.example.yunjing.data.LegalText
 import com.example.yunjing.data.RoleStore
+import com.example.yunjing.data.UserRole
+import kotlinx.coroutines.launch
 
 enum class LegalDoc { TERMS, PRIVACY }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScreen(
-    role: String, // 买家 or 商家
+    role: String,
     onBack: () -> Unit,
     onAuthSuccess: () -> Unit
 
@@ -59,7 +82,6 @@ fun AuthScreen(
 
     val scope = rememberCoroutineScope()
 
-    // role string -> UserRole
     val userRole = if (role == "merchant") UserRole.MERCHANT else UserRole.BUYER
 
     var errorMsg by remember { mutableStateOf<String?>(null) }
@@ -111,7 +133,7 @@ fun AuthScreen(
                 .padding(start = 12.dp, top = 10.dp)
         )
 
-        // 整体可滚动：小屏不会裁剪
+        // 整体可滚动
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -157,9 +179,9 @@ fun AuthScreen(
                     )
 
                     if (tab == 0) {
-                        // =========================
-                        // 登录
-                        // =========================
+                        /**
+                         * 登录
+                         */
                         Text("账号", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         AppTextField(
                             value = loginAccount,
@@ -215,17 +237,30 @@ fun AuthScreen(
                                     try {
                                         val resp = authRepository.login(
                                             username = loginAccount.trim(),
-                                            password = loginPassword
+                                            password = loginPassword,
+                                            role = userRole
                                         )
 
                                         if (resp.success) {
                                             val backendRole = when (resp.role?.uppercase()) {
-                                                "MERCHANT" -> UserRole.MERCHANT
-                                                else -> UserRole.BUYER
+                                                UserRole.BUYER.name -> UserRole.BUYER
+                                                UserRole.MERCHANT.name -> UserRole.MERCHANT
+                                                else -> null
                                             }
 
-                                            roleStore.setRole(backendRole)
-                                            authStore.saveLogin(backendRole, resp.username ?: loginAccount.trim())
+                                            if (backendRole != null && backendRole != userRole) {
+                                                errorMsg = "当前入口为${if (isBuyer) "买家端" else "商家端"}，请切换到正确身份后登录"
+                                                return@launch
+                                            }
+
+                                            val finalRole = backendRole ?: userRole
+
+                                            roleStore.setRole(finalRole)
+                                            authStore.saveLogin(
+                                                role = finalRole,
+                                                account = resp.username ?: loginAccount.trim(),
+                                                userId = resp.userId
+                                            )
                                             onAuthSuccess()
                                         } else {
                                             errorMsg = resp.message.ifBlank { "账号或密码错误" }
@@ -253,10 +288,9 @@ fun AuthScreen(
                         )
 
                     } else {
-                        // =========================
-                        // 注册
-                        // =========================
-
+                        /**
+                         * 注册
+                         */
                         Text("账号", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         AppTextField(
                             value = regAccount,
@@ -369,16 +403,16 @@ fun AuthScreen(
                         AppCenterDialog(
                             visible = showRegisterSuccessDialog,
                             title = "注册成功",
-                            message = "账号已创建，请使用刚才的账号密码登录。",
+                            message = "账号已创建，请使用当前${if (isBuyer) "买家端" else "商家端"}入口登录。",
                             confirmText = "去登录",
                             cancelText = "稍后",
-                            dismissOnClickOutside = false, // 再保险一次
+                            dismissOnClickOutside = false,
                             onConfirm = {
                                 showRegisterSuccessDialog = false
                                 clearRegisterFields()
                                 // 切换到登录页
                                 tab = 0
-                                // 清空登录密码，让用户重新输入更符合“再次登录”
+                                // 清空登录密码，让用户重新输入
                                 loginPassword = ""
                             },
                             onCancel = {
@@ -582,7 +616,6 @@ private fun LegalSheetContent(
             .imePadding()
             .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
-        // 只保留标题，不要右上角关闭
         Text(
             title,
             style = MaterialTheme.typography.titleLarge,

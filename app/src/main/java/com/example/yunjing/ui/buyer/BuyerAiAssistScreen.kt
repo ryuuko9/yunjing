@@ -63,35 +63,49 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.example.yunjing.R
 
-data class BuyerAiMockVideo(
+private val BuyerAiDemoVideoList = listOf(
+    BuyerAiDemoVideo(
+        id = "demo_1",
+        title = "",
+        desc = "安装过程演示",
+        resId = R.raw.buyer_ai_demo_1
+    ),
+    BuyerAiDemoVideo(
+        id = "demo_2",
+        title = "",
+        desc = "安装过程演示",
+        resId = R.raw.buyer_ai_demo_2
+    ),
+    BuyerAiDemoVideo(
+        id = "demo_3",
+        title = "",
+        desc = "安装过程演示",
+        resId = R.raw.buyer_ai_demo_3
+    )
+)
+
+private val BuyerAiPageBackgroundBrush = Brush.verticalGradient(
+    colors = listOf(
+        Color(0xFFF6F7FB),
+        Color(0xFFF2F4F8)
+    )
+)
+
+private val BuyerAiPrimaryButtonBrush = Brush.horizontalGradient(
+    colors = listOf(
+        Color(0xFF3366F0),
+        Color(0xFF4F86FF)
+    )
+)
+
+data class BuyerAiDemoVideo(
     val id: String,
     val title: String,
     val desc: String,
     @RawRes val resId: Int
 )
 
-fun buyerAiMockVideos(): List<BuyerAiMockVideo> {
-    return listOf(
-        BuyerAiMockVideo(
-            id = "demo_1",
-            title = "",
-            desc = "安装过程演示",
-            resId = R.raw.buyer_ai_demo_1
-        ),
-        BuyerAiMockVideo(
-            id = "demo_2",
-            title = "",
-            desc = "安装过程演示",
-            resId = R.raw.buyer_ai_demo_2
-        ),
-        BuyerAiMockVideo(
-            id = "demo_3",
-            title = "",
-            desc = "安装过程演示",
-            resId = R.raw.buyer_ai_demo_3
-        )
-    )
-}
+fun buyerAiDemoVideos(): List<BuyerAiDemoVideo> = BuyerAiDemoVideoList
 
 @Composable
 fun BuyerAiRemoteAssistHome(
@@ -101,14 +115,7 @@ fun BuyerAiRemoteAssistHome(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFFF6F7FB),
-                        Color(0xFFF2F4F8)
-                    )
-                )
-            )
+            .background(brush = BuyerAiPageBackgroundBrush)
             .padding(horizontal = 20.dp, vertical = 18.dp)
     ) {
         Spacer(modifier = Modifier.height(8.dp))
@@ -160,14 +167,7 @@ fun BuyerAiRemoteAssistHome(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(18.dp))
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color(0xFF3366F0),
-                                    Color(0xFF4F86FF)
-                                )
-                            )
-                        )
+                        .background(brush = BuyerAiPrimaryButtonBrush)
                         .safeClick(onEnterAi)
                         .padding(vertical = 16.dp),
                     contentAlignment = Alignment.Center
@@ -186,22 +186,15 @@ fun BuyerAiRemoteAssistHome(
 
 @Composable
 fun BuyerAiVideoSelectScreen(
-    videos: List<BuyerAiMockVideo>,
+    videos: List<BuyerAiDemoVideo>,
     onBack: () -> Unit,
-    onSelectVideo: (BuyerAiMockVideo) -> Unit
+    onSelectVideo: (BuyerAiDemoVideo) -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFFF6F7FB),
-                        Color(0xFFF2F4F8)
-                    )
-                )
-            )
+            .background(brush = BuyerAiPageBackgroundBrush)
             .padding(horizontal = 20.dp, vertical = 18.dp)
     ) {
         Row(
@@ -259,7 +252,7 @@ fun BuyerAiVideoSelectScreen(
 
 @Composable
 private fun BuyerAiVideoCard(
-    video: BuyerAiMockVideo,
+    video: BuyerAiDemoVideo,
     onClick: () -> Unit
 ) {
     Card(
@@ -310,7 +303,7 @@ private fun BuyerAiVideoCard(
 
 @Composable
 fun BuyerAiCallScreen(
-    video: BuyerAiMockVideo,
+    video: BuyerAiDemoVideo,
     onExit: () -> Unit,
     onTransferHuman: () -> Unit
 ) {
@@ -429,45 +422,18 @@ private fun BuyerAiMuteActionButton(
     muted: Boolean,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (muted) {
-        Color.White.copy(alpha = 0.92f)
-    } else {
-        Color(0xFFE6E1EA).copy(alpha = 0.82f)
-    }
-
-    val iconTint = if (muted) {
-        Color.Red
-    } else {
-        Color(0xFF111111)
-    }
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(84.dp)
-                .clip(CircleShape)
-                .background(backgroundColor)
-                .safeClick(onClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = if (muted) Icons.Filled.MicOff else Icons.Filled.Mic,
-                contentDescription = "静音",
-                tint = iconTint,
-                modifier = Modifier.size(34.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Text(
-            text = "静音",
-            color = Color.White,
-            fontSize = 14.sp
-        )
-    }
+    BuyerAiActionButton(
+        icon = if (muted) Icons.Filled.MicOff else Icons.Filled.Mic,
+        label = "静音",
+        contentDescription = "静音",
+        backgroundColor = if (muted) {
+            Color.White.copy(alpha = 0.92f)
+        } else {
+            Color(0xFFE6E1EA).copy(alpha = 0.82f)
+        },
+        iconTint = if (muted) Color.Red else Color(0xFF111111),
+        onClick = onClick
+    )
 }
 
 @Composable
@@ -477,12 +443,43 @@ private fun BuyerAiPressableActionButton(
     pressed: Boolean,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (pressed) {
-        Color(0xFFD8D2DD).copy(alpha = 0.95f)
-    } else {
-        Color(0xFFE6E1EA).copy(alpha = 0.82f)
-    }
+    BuyerAiActionButton(
+        icon = icon,
+        label = label,
+        contentDescription = label,
+        backgroundColor = if (pressed) {
+            Color(0xFFD8D2DD).copy(alpha = 0.95f)
+        } else {
+            Color(0xFFE6E1EA).copy(alpha = 0.82f)
+        },
+        iconTint = Color(0xFF111111),
+        onClick = onClick
+    )
+}
 
+@Composable
+private fun BuyerAiExitActionButton(
+    onClick: () -> Unit
+) {
+    BuyerAiActionButton(
+        icon = Icons.Filled.Close,
+        label = "退出",
+        contentDescription = "退出",
+        backgroundColor = Color(0xFFE6E1EA).copy(alpha = 0.82f),
+        iconTint = Color.Red,
+        onClick = onClick
+    )
+}
+
+@Composable
+private fun BuyerAiActionButton(
+    icon: ImageVector,
+    label: String,
+    contentDescription: String,
+    backgroundColor: Color,
+    iconTint: Color,
+    onClick: () -> Unit
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -496,8 +493,8 @@ private fun BuyerAiPressableActionButton(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = label,
-                tint = Color(0xFF111111),
+                contentDescription = contentDescription,
+                tint = iconTint,
                 modifier = Modifier.size(34.dp)
             )
         }
@@ -506,39 +503,6 @@ private fun BuyerAiPressableActionButton(
 
         Text(
             text = label,
-            color = Color.White,
-            fontSize = 14.sp
-        )
-    }
-}
-
-@Composable
-private fun BuyerAiExitActionButton(
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(84.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFE6E1EA).copy(alpha = 0.82f))
-                .safeClick(onClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Close,
-                contentDescription = "退出",
-                tint = Color.Red,
-                modifier = Modifier.size(34.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Text(
-            text = "退出",
             color = Color.White,
             fontSize = 14.sp
         )
@@ -554,7 +518,7 @@ private fun BuyerAiVideoPlayer(
 ) {
     val context = LocalContext.current
 
-    var player = remember(videoResId) {
+    val player = remember(videoResId) {
         ExoPlayer.Builder(context).build().apply {
             val uri = RawResourceDataSource.buildRawResourceUri(videoResId)
             val mediaItem = MediaItem.fromUri(uri)
@@ -583,7 +547,7 @@ private fun BuyerAiVideoPlayer(
         modifier = modifier,
         factory = { ctx ->
             PlayerView(ctx).apply {
-                player = player
+                this.player = player
                 useController = false
                 resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                 setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
@@ -599,6 +563,7 @@ private fun BuyerAiVideoPlayer(
         }
     )
 }
+
 @Composable
 private fun Modifier.safeClick(onClick: () -> Unit): Modifier {
     return this.clickable(
